@@ -1,0 +1,18 @@
+# Secrets (API keys) — never upload
+.env
+
+# Downloaded JavaScript packages (re-installable)
+node_modules/
+
+# Python's automatic temporary files
+__pycache__/
+*.pyc
+
+# Video files — we never save camera video
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.avi
+*.mkv
+*.webm
