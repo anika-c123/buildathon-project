@@ -76,7 +76,7 @@ Copy-paste these as your first messages in Claude Code. Each one points Claude a
 
 **Prompt 3: desk view**
 
-> Build the desk view for the projector: dark background, large light text, calm colors, no red. Show the current step big, time as a shrinking bar instead of numbers, and progress dots for the steps. When active_nudge is set, show it as a gentle card with three buttons: Back to work (dismiss), Break, and This is relevant. Show reentry messages for 8 seconds. Add a step done button with a small celebration animation, a break screen, and a one-tap parking lot (park action) with saved thoughts listed small at the edge. It must be readable from a meter away.
+> Build the desk view for the projector: dark background, large light text, calm colors (red is okay for a nudge, as long as it still feels gentle). Show the current step big, time as a shrinking bar instead of numbers, and progress dots for the steps. When active_nudge is set, show it as a gentle card with three buttons: Back to work (dismiss), Break, and This is relevant. Show reentry messages for 8 seconds. Add a step done button with a small celebration animation, a break screen, and a one-tap parking lot (park action) with saved thoughts listed small at the edge. It must be readable from a meter away.
 
 **Prompt 4: test with fake data**
 

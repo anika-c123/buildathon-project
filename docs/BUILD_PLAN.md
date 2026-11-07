@@ -99,7 +99,7 @@ Everyone works in their own folder, testing against fake messages (`fake_events.
 | F6 | Parking lot: one tap opens a text box; saved thoughts listed small at the edge | `park` messages appear in the list |
 | F7 | Step done button + small celebration animation | Progress fills and the next step appears |
 | F8 | Break screen and end-of-session summary screen | Both display from the example files |
-| F9 | Desk design: dark background, light text, big type, calm colors, no red | Looks good projected in a bright room |
+| F9 | Desk design: dark background, light text, big type, calm colors (red is fine for a nudge, kept gentle) | Looks good projected in a bright room |
 | F10 | Works with the backend off: shows "Connecting…" instead of crashing | Tested |
 
 **Nice to have**

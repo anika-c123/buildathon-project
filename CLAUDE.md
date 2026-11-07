@@ -41,7 +41,7 @@ Adding a new optional field or message type is fine without a team meeting. Chan
 - The AI check labels each site as relevant, unrelated, or uncertain. Save its answers so the same site isn't checked twice.
 - Nudge only after something lasts a while, with a cooldown between nudges. Keep a demo mode with very short timings.
 - A phone lying on the desk is not a distraction; a phone held for a while is.
-- Nudges are friendly and never shaming. No red warning screens.
+- Nudges are friendly and never shaming. Red is fine for a nudge now (the team changed this rule) — just keep the wording itself gentle.
 - Privacy: only watch during a session the student starts. Never save camera video. Only send the site name and page title to the AI, never page contents.
 - Keep any API key (the password for the AI service) in a `.env` file, and never commit it to GitHub.
 - Timer: the projector view shows a session timer that starts when the student starts a session. It pauses during a break (`user_action: break`) and resumes when they're back. It's calm and encouraging (time focused so far), never a stressful countdown. The timer runs inside the app, so it doesn't need a new message type.
