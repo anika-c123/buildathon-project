@@ -1,11 +1,10 @@
 """Session state: the backend's single in-memory snapshot (docs/CONTRACT.md §4-6).
 
-This is B1 — session state and the user_action rules. It deliberately does
-NOT touch tab_change / camera_state (that's relevance.py, B2, and vision
-integration, B8-B9) and there is no nudge system yet (B4-B6), so:
-  - `plan` returns a fixed stand-in instead of calling the AI (real version: B10).
-  - `dismiss` / `relevant` just clear active_nudge, which is already None,
-    because nothing can set it to anything else yet.
+B1 (session state + user_action) plus the state this session needs to
+support B4's nudge rules: who's being watched for a nudge (camera, tab
+activity), who's already been marked relevant, and the cooldown/away
+bookkeeping nudges.py's tick() reads and writes. `plan` still returns a
+fixed stand-in instead of calling the AI (real version: B10).
 """
 
 import json
@@ -32,7 +31,21 @@ class Session:
 
     def __init__(self):
         self.state = load_example("session_update_idle.json")
+        self._reset_bookkeeping()
+
+    def _reset_bookkeeping(self) -> None:
         self._breaks = 0
+        self._nudges_fired = 0
+        self._nudges_dismissed = 0
+        self._nudge_counter = 0
+        self._wording_index: dict[str, int] = {}
+        self._active_nudge_domain: str | None = None
+        self._relevant_domains: set[str] = set()
+        self._last_nudge_cleared_at: int | None = None
+        self._last_camera_at: int | None = None
+        self._last_real_camera_state: str | None = None
+        self._away_confirmed = False
+        self._study_segment_started_at: int | None = None
 
     def snapshot(self) -> dict:
         return self.state
@@ -46,6 +59,110 @@ class Session:
         if current["domain"] != domain or current["label"] != label or since is None:
             since = now_ms()
         self.state["activity"] = {"domain": domain, "title": title, "label": label, "since": since}
+
+    def is_marked_relevant(self, domain: str | None) -> bool:
+        """A site the student clicked "this is relevant" on: never nudged
+        again this session (docs/CONTRACT.md §4, the `relevant` action)."""
+        return domain in self._relevant_domains
+
+    def set_camera(self, cam_state: str, confidence: float | None) -> tuple[str, dict] | None:
+        """Updates camera state (B8/B9). Returns an extra ("reentry", data)
+        message when this is a return from a confirmed-away stretch, or from
+        putting down a phone that had an active nudge up — else None.
+
+        Compares against the last REAL observation (_last_real_camera_state),
+        not the displayed camera.state, so a camera-silence gap in between
+        (camera_went_silent(), which never touches that field) can't erase
+        the "away"/"phone_in_hand" history this check depends on."""
+        old = self.state["camera"]
+        was_away = self._last_real_camera_state == "away"
+        was_phone = self._last_real_camera_state == "phone_in_hand"
+        extra = None
+        if was_away and cam_state != "away" and self._away_confirmed:
+            extra = ("reentry", self.reentry_message())
+        elif (
+            was_phone
+            and cam_state != "phone_in_hand"
+            and self.state["active_nudge"]
+            and self.state["active_nudge"]["reason"] == "phone"
+        ):
+            extra = ("reentry", self.reentry_message())
+            self.state["active_nudge"] = None
+            self._last_nudge_cleared_at = now_ms()
+        if cam_state != "away":
+            self._away_confirmed = False
+        since = old["since"]
+        if old["state"] != cam_state or since is None:
+            since = now_ms()
+        self.state["camera"] = {"state": cam_state, "since": since}
+        self._last_real_camera_state = cam_state
+        return extra
+
+    def camera_went_silent(self) -> None:
+        """Camera silence -> unknown (contract §6). This is a fallback for
+        when vision has stopped reporting, NOT a real observation — so unlike
+        set_camera(), it must never trigger the "phone put down" or "back
+        from away" reentry logic, and it leaves _last_real_camera_state
+        alone so a later real observation can still compare against what
+        actually happened before the silence."""
+        self.state["camera"] = {"state": "unknown", "since": now_ms()}
+
+    def clear_nudge_if_back_on_task(self, domain: str | None, label: str) -> tuple[str, dict] | None:
+        """Auto-clears an active unrelated_tab nudge (and sends reentry) when
+        the student switches back to a relevant tab on their own, without
+        pressing a button (docs/ARCHITECTURE.md's walkthrough)."""
+        nudge = self.state["active_nudge"]
+        if nudge and nudge["reason"] == "unrelated_tab" and label == "relevant":
+            extra = ("reentry", self.reentry_message())
+            self.state["active_nudge"] = None
+            self._active_nudge_domain = None
+            self._last_nudge_cleared_at = now_ms()
+            return extra
+        return None
+
+    def fire_nudge(self, reason: str, message: str, domain: str | None = None) -> dict:
+        self._nudge_counter += 1
+        self._nudges_fired += 1
+        nudge = {"id": f"n{self._nudge_counter}", "reason": reason, "message": message}
+        self.state["active_nudge"] = nudge
+        self._active_nudge_domain = domain
+        return nudge
+
+    # ---- Bookkeeping nudges.py's tick() needs, kept behind named methods
+    # ---- instead of letting it poke underscore-prefixed fields directly.
+
+    def note_camera_heartbeat(self, now: int) -> None:
+        self._last_camera_at = now
+
+    def camera_silent_for(self, now: int) -> int | None:
+        if self._last_camera_at is None:
+            return None
+        return now - self._last_camera_at
+
+    def confirm_away_if_due(self, now: int, threshold_ms: int) -> None:
+        """Marks the current away stretch "confirmed" once it's held long
+        enough — enables the reentry-on-return rule in set_camera()."""
+        camera = self.state["camera"]
+        if camera["state"] == "away" and not self._away_confirmed:
+            if now - camera["since"] >= threshold_ms:
+                self._away_confirmed = True
+
+    def cooldown_elapsed(self, now: int, cooldown_ms: int) -> bool:
+        return self._last_nudge_cleared_at is None or now - self._last_nudge_cleared_at >= cooldown_ms
+
+    def study_segment_elapsed(self, now: int, threshold_ms: int) -> bool:
+        return (
+            self._study_segment_started_at is not None
+            and now - self._study_segment_started_at >= threshold_ms
+        )
+
+    def restart_study_segment(self, now: int) -> None:
+        self._study_segment_started_at = now
+
+    def next_wording_index(self, reason: str) -> int:
+        index = self._wording_index.get(reason, 0)
+        self._wording_index[reason] = index + 1
+        return index
 
     def apply_action(self, action: str, fields: dict):
         """Applies one user_action. Returns (state_changed, extra_message),
@@ -74,7 +191,8 @@ class Session:
         steps = [{"text": text, "done": False} for text in fields.get("steps", [])]
         started_at = now_ms()
         minutes = fields.get("minutes", 60)
-        self._breaks = 0
+        self._reset_bookkeeping()
+        self._study_segment_started_at = started_at
         self.state = {
             "status": "studying",
             "goal": fields.get("goal"),
@@ -107,6 +225,13 @@ class Session:
         minutes = fields.get("minutes", DEFAULT_BREAK_MINUTES)
         self.state["status"] = "break"
         self.state["break_ends_at"] = now_ms() + minutes * 60_000
+        # No nudges during a break (contract §6), and the long-stretch clock pauses.
+        # Clearing a nudge this way starts the cooldown too, same as dismiss.
+        if self.state["active_nudge"] is not None:
+            self._last_nudge_cleared_at = now_ms()
+        self.state["active_nudge"] = None
+        self._active_nudge_domain = None
+        self._study_segment_started_at = None
         self._breaks += 1
         return True, None
 
@@ -115,7 +240,8 @@ class Session:
             return False, None
         self.state["status"] = "studying"
         self.state["break_ends_at"] = None
-        return True, ("reentry", self._reentry_message())
+        self._study_segment_started_at = now_ms()
+        return True, ("reentry", self.reentry_message())
 
     def _handle_park(self, fields):
         self.state["parked"].append({"text": fields["text"], "timestamp": now_ms()})
@@ -123,10 +249,22 @@ class Session:
 
     def _handle_dismiss(self, fields):
         self.state["active_nudge"] = None
+        self._active_nudge_domain = None
+        self._last_nudge_cleared_at = now_ms()
+        self._nudges_dismissed += 1
         return True, None
 
     def _handle_relevant(self, fields):
+        # Whitelist whatever tab the student is actually looking at right
+        # now, not necessarily the tab that originally triggered the nudge
+        # still on screen (they may have switched tabs since). Contract §4
+        # documents only `dismiss` as starting the cooldown, so this doesn't.
+        domain = self.state["activity"]["domain"]
+        if self.state["active_nudge"] is not None and domain:
+            self._relevant_domains.add(domain)
+            self.state["activity"]["label"] = "relevant"
         self.state["active_nudge"] = None
+        self._active_nudge_domain = None
         return True, None
 
     def _handle_end_session(self, fields):
@@ -136,7 +274,7 @@ class Session:
         self.state = load_example("session_update_idle.json")
         return True, ("summary", summary)
 
-    def _reentry_message(self) -> dict:
+    def reentry_message(self) -> dict:
         steps = self.state["steps"]
         i = self.state["current_step"]
         if 0 <= i < len(steps):
@@ -160,8 +298,8 @@ class Session:
             "minutes_studied": max(0, round((now_ms() - started_at) / 60_000)),
             "steps_done": steps_done,
             "steps_total": steps_total,
-            "nudges": 0,  # real counts once nudge rules (B4) exist
-            "nudges_dismissed": 0,
+            "nudges": self._nudges_fired,
+            "nudges_dismissed": self._nudges_dismissed,
             "breaks": self._breaks,
             "parked": [parked["text"] for parked in self.state["parked"]],
             "note": note,
