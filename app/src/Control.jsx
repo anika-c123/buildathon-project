@@ -128,11 +128,17 @@ export default function Control() {
           <span className="ctl-pulse" aria-hidden="true" /> Connecting… (waiting for the backend on port 8000)
         </div>
       )}
-      <main className="ctl-card">
-        <header className="ctl-header">
+      <header className="ctl-header">
+        <span className="ctl-brand">
+          <LockMark />
           <span className="ctl-logo">PLocked</span>
-          <span className="ctl-subtitle">Control screen</span>
-        </header>
+        </span>
+        <span className="ctl-subtitle">
+          <span className={`ctl-conn ${connected ? "is-on" : ""}`} aria-hidden="true" />
+          {connected ? "Connected" : "Offline"}
+        </span>
+      </header>
+      <main className="ctl-card">
         {notice && (
           <p className="ctl-notice" role="alert">
             {notice}
@@ -177,7 +183,7 @@ function SetupView({
       }}
     >
       <div className="ctl-section">
-        <label className="ctl-label" htmlFor="goal">
+        <label className="ctl-headline" htmlFor="goal">
           What do you want to get done?
         </label>
         <div className="ctl-row">
@@ -256,8 +262,9 @@ function SetupView({
         </label>
       </div>
 
-      <button type="submit" className="ctl-btn ctl-btn-primary ctl-start" disabled={!canStart}>
-        Start session
+      <button type="submit" className="ctl-cta" disabled={!canStart}>
+        <span>Start session</span>
+        <Arrow />
       </button>
       {!minutesOk && <p className="ctl-muted ctl-small">Minutes must be between 1 and 240.</p>}
     </form>
@@ -302,7 +309,7 @@ function StudyingView({ data, connected, onEnd }) {
         The desk view is at <code>localhost:5173/desk</code>. Drag it onto the projector and go full screen.
       </p>
       <button type="button" className="ctl-btn ctl-btn-quiet" onClick={onEnd} disabled={!connected}>
-        End session
+        End session <Arrow small />
       </button>
     </div>
   );
@@ -341,9 +348,41 @@ function SummaryView({ summary, onNewSession }) {
           </ul>
         </div>
       )}
-      <button type="button" className="ctl-btn ctl-btn-primary" onClick={onNewSession}>
-        Start a new session
+      <button type="button" className="ctl-cta" onClick={onNewSession}>
+        <span>Start a new session</span>
+        <Arrow />
       </button>
     </div>
+  );
+}
+
+// ---------- Small icons ----------
+
+// Right arrow in a dark circle, like a "go" pill button.
+function Arrow({ small = false }) {
+  if (small) {
+    return (
+      <svg className="ctl-arrow-plain" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <span className="ctl-arrow" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
+// A small rounded padlock: PLocked's own mark.
+function LockMark() {
+  return (
+    <svg className="ctl-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7.5 10V7.5a4.5 4.5 0 0 1 9 0V10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <rect x="4" y="10" width="16" height="11.5" rx="4" fill="currentColor" />
+      <circle cx="12" cy="15.6" r="1.7" fill="#fbfcf5" />
+    </svg>
   );
 }

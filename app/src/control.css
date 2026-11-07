@@ -1,17 +1,22 @@
-/* Control screen styles. Calm and readable: one teal accent, no red anywhere
-   (team rule: nudges and errors are friendly, never alarming). */
+/* Control screen styles.
+   Look: cream page, deep forest-green text, a soft serif (Fraunces) for
+   headlines, a rounded sans (Figtree) for everything else, pill buttons,
+   and lime for the one main action. No red anywhere (team rule). */
 
 :root {
-  --ctl-bg: #f4f2ee;
-  --ctl-card: #ffffff;
-  --ctl-ink: #1f2328;
-  --ctl-muted: #6b6f76;
-  --ctl-line: #e2ded6;
-  --ctl-accent: #1f7a72;
-  --ctl-accent-soft: #e3f1ef;
-  --ctl-amber: #b7791f;
-  --ctl-amber-soft: #fbf1df;
-  --ctl-radius: 12px;
+  --ctl-bg: #f6f7ee;
+  --ctl-card: #fdfdf8;
+  --ctl-ink: #1e3b2b;
+  --ctl-green: #2c4a36;
+  --ctl-muted: #66776b;
+  --ctl-line: #e2e6d5;
+  --ctl-soft: #ebf0e1;
+  --ctl-lime: #e3f58c;
+  --ctl-lime-hover: #d6ec6f;
+  --ctl-sand: #f3ead2;
+  --ctl-sand-ink: #6b5a2e;
+  --ctl-serif: "Fraunces Variable", Georgia, serif;
+  --ctl-sans: "Figtree Variable", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
 }
 
 * {
@@ -24,13 +29,24 @@ body {
 
 .ctl-page {
   min-height: 100vh;
-  background: var(--ctl-bg);
+  background: radial-gradient(120% 80% at 100% 100%, #e9f0da 0%, transparent 55%), var(--ctl-bg);
   color: var(--ctl-ink);
-  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-size: 16px;
+  font-family: var(--ctl-sans);
+  font-size: 15px;
   line-height: 1.45;
-  padding: 48px 16px;
+  padding: 28px 16px 56px;
 }
+
+/* Soft serif: Fraunces with its "softness" turned all the way up. */
+.ctl-headline,
+.ctl-goal-title,
+.ctl-logo,
+.ctl-stat-value {
+  font-family: var(--ctl-serif);
+  font-variation-settings: "SOFT" 100, "WONK" 0;
+}
+
+/* ---------- Connecting banner ---------- */
 
 .ctl-banner {
   position: fixed;
@@ -39,11 +55,11 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 10px 16px;
-  background: var(--ctl-amber-soft);
-  color: #6b4a12;
-  font-size: 14px;
-  border-bottom: 1px solid #efdcb6;
+  padding: 9px 16px;
+  background: var(--ctl-sand);
+  color: var(--ctl-sand-ink);
+  font-size: 13px;
+  font-weight: 500;
   z-index: 10;
 }
 
@@ -51,7 +67,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--ctl-amber);
+  background: #c79a3e;
   animation: ctl-pulse 1.2s ease-in-out infinite;
 }
 
@@ -61,41 +77,82 @@ body {
   }
 }
 
-.ctl-card {
-  max-width: 640px;
-  margin: 0 auto;
-  background: var(--ctl-card);
-  border: 1px solid var(--ctl-line);
-  border-radius: 18px;
-  padding: 32px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
+/* ---------- Floating pill header ---------- */
 
 .ctl-header {
+  max-width: 600px;
+  margin: 14px auto 22px;
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 24px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 10px 16px;
+  background: rgba(253, 253, 248, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--ctl-line);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(30, 59, 43, 0.06);
+}
+
+.ctl-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ctl-green);
+}
+
+.ctl-mark {
+  width: 22px;
+  height: 22px;
 }
 
 .ctl-logo {
-  font-weight: 700;
-  font-size: 20px;
+  font-weight: 600;
+  font-size: 19px;
   letter-spacing: -0.01em;
 }
 
 .ctl-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   color: var(--ctl-muted);
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--ctl-soft);
+}
+
+.ctl-conn {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c79a3e;
+}
+
+.ctl-conn.is-on {
+  background: #4f9a5f;
+}
+
+/* ---------- Card ---------- */
+
+.ctl-card {
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--ctl-card);
+  border: 1px solid var(--ctl-line);
+  border-radius: 28px;
+  padding: 32px;
+  box-shadow: 0 1px 2px rgba(30, 59, 43, 0.04), 0 18px 40px rgba(30, 59, 43, 0.05);
 }
 
 .ctl-notice {
-  background: var(--ctl-amber-soft);
-  color: #6b4a12;
-  border-radius: var(--ctl-radius);
+  background: var(--ctl-sand);
+  color: var(--ctl-sand-ink);
+  border-radius: 16px;
   padding: 10px 14px;
   margin: 0 0 20px;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .ctl-muted {
@@ -103,19 +160,34 @@ body {
 }
 
 .ctl-small {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .ctl-center {
   text-align: center;
 }
 
+.ctl-headline {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ctl-green);
+  margin: 0 0 6px;
+}
+
 .ctl-label {
   display: block;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ctl-muted);
   margin-bottom: 8px;
 }
+
+/* ---------- Form ---------- */
 
 .ctl-form {
   display: flex;
@@ -132,33 +204,46 @@ body {
 .ctl-input {
   font: inherit;
   color: inherit;
-  padding: 10px 12px;
+  padding: 10px 16px;
   border: 1px solid var(--ctl-line);
-  border-radius: 10px;
+  border-radius: 999px;
   background: #fff;
   min-width: 0;
   flex: 1;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ctl-input::placeholder {
+  color: #a3ad9f;
 }
 
 .ctl-input:focus {
-  outline: 2px solid var(--ctl-accent);
-  outline-offset: 1px;
-  border-color: transparent;
+  outline: none;
+  border-color: var(--ctl-green);
+  box-shadow: 0 0 0 3px rgba(44, 74, 54, 0.12);
 }
 
 .ctl-goal {
-  font-size: 18px;
+  font-size: 16px;
+  padding: 12px 18px;
   min-width: 220px;
 }
 
+/* ---------- Buttons ---------- */
+
 .ctl-btn {
   font: inherit;
-  font-weight: 600;
-  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  border-radius: 999px;
   padding: 10px 18px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s, opacity 0.15s, border-color 0.15s;
 }
 
 .ctl-btn:disabled {
@@ -166,40 +251,92 @@ body {
   cursor: not-allowed;
 }
 
-.ctl-btn-primary {
-  background: var(--ctl-accent);
-  color: #fff;
-}
-
-.ctl-btn-primary:not(:disabled):hover {
-  background: #186760;
-}
-
 .ctl-btn-secondary {
-  background: var(--ctl-accent-soft);
-  color: var(--ctl-accent);
+  background: var(--ctl-soft);
+  color: var(--ctl-green);
+}
+
+.ctl-btn-secondary:not(:disabled):hover {
+  background: #e0e8d3;
 }
 
 .ctl-btn-quiet {
   background: transparent;
   border-color: var(--ctl-line);
-  color: var(--ctl-ink);
+  color: var(--ctl-green);
   align-self: flex-start;
+  padding: 10px 14px 10px 20px;
 }
 
 .ctl-btn-quiet:not(:disabled):hover {
-  background: var(--ctl-bg);
+  border-color: var(--ctl-green);
 }
 
-.ctl-start {
-  font-size: 18px;
-  padding: 14px;
+.ctl-arrow-plain {
+  width: 18px;
+  height: 18px;
 }
+
+/* The main action: a lime pill with a dark circle and arrow at the end. */
+.ctl-cta {
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ctl-green);
+  background: var(--ctl-lime);
+  border: none;
+  border-radius: 999px;
+  padding: 7px 7px 7px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.ctl-cta:not(:disabled):hover {
+  background: var(--ctl-lime-hover);
+}
+
+.ctl-cta:not(:disabled):hover .ctl-arrow {
+  transform: translateX(2px);
+}
+
+.ctl-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ctl-arrow {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ctl-green);
+  color: var(--ctl-lime);
+  transition: transform 0.15s;
+}
+
+.ctl-arrow svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---------- Steps ---------- */
 
 .ctl-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.ctl-section > .ctl-label {
+  margin-bottom: 0;
 }
 
 .ctl-steps {
@@ -224,40 +361,48 @@ body {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--ctl-accent-soft);
-  color: var(--ctl-accent);
-  font-size: 13px;
+  background: var(--ctl-green);
+  color: var(--ctl-lime);
+  font-size: 12px;
   font-weight: 700;
 }
 
 .ctl-icon-btn {
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1;
   width: 32px;
   height: 32px;
   flex: none;
   border: none;
-  border-radius: 8px;
+  border-radius: 50%;
   background: transparent;
   color: var(--ctl-muted);
   cursor: pointer;
 }
 
 .ctl-icon-btn:hover {
-  background: var(--ctl-bg);
+  background: var(--ctl-soft);
   color: var(--ctl-ink);
 }
 
 .ctl-link-btn {
   font: inherit;
+  font-size: 14px;
   align-self: flex-start;
   border: none;
   background: none;
   padding: 4px 0;
-  color: var(--ctl-accent);
-  font-weight: 600;
+  color: var(--ctl-green);
+  font-weight: 700;
   cursor: pointer;
 }
+
+.ctl-link-btn:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Settings row ---------- */
 
 .ctl-settings {
   display: flex;
@@ -269,7 +414,7 @@ body {
 }
 
 .ctl-minutes {
-  width: 96px;
+  width: 92px;
   flex: none;
 }
 
@@ -279,6 +424,7 @@ body {
   gap: 10px;
   cursor: pointer;
   padding-bottom: 8px;
+  font-size: 14px;
 }
 
 .ctl-toggle input {
@@ -307,23 +453,24 @@ body {
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  transition: transform 0.15s;
+  transition: transform 0.15s, background 0.15s;
 }
 
 .ctl-toggle input:checked + .ctl-switch {
-  background: var(--ctl-accent);
+  background: var(--ctl-green);
 }
 
 .ctl-toggle input:checked + .ctl-switch::after {
   transform: translateX(16px);
+  background: var(--ctl-lime);
 }
 
 .ctl-toggle input:focus-visible + .ctl-switch {
-  outline: 2px solid var(--ctl-accent);
+  outline: 2px solid var(--ctl-green);
   outline-offset: 2px;
 }
 
-/* Studying + summary */
+/* ---------- Studying + summary ---------- */
 
 .ctl-studying,
 .ctl-summary {
@@ -337,47 +484,52 @@ body {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-weight: 600;
-  color: var(--ctl-accent);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ctl-green);
 }
 
 .ctl-dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: var(--ctl-accent);
+  background: #4f9a5f;
 }
 
 .ctl-dot-break {
-  background: var(--ctl-amber);
+  background: #c79a3e;
 }
 
 .ctl-tag {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--ctl-muted);
-  border: 1px solid var(--ctl-line);
+  background: var(--ctl-soft);
   border-radius: 999px;
-  padding: 1px 8px;
+  padding: 2px 9px;
 }
 
 .ctl-goal-title {
-  font-size: 26px;
-  line-height: 1.25;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.18;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  color: var(--ctl-green);
 }
 
 .ctl-progress {
   height: 8px;
   border-radius: 999px;
-  background: var(--ctl-bg);
+  background: var(--ctl-soft);
   overflow: hidden;
 }
 
 .ctl-progress-fill {
   height: 100%;
-  background: var(--ctl-accent);
+  background: var(--ctl-green);
   border-radius: 999px;
   transition: width 0.6s ease;
 }
@@ -397,6 +549,7 @@ body {
 
 .ctl-step-status .is-current {
   font-weight: 700;
+  color: var(--ctl-green);
 }
 
 .ctl-stats {
@@ -407,8 +560,8 @@ body {
 }
 
 .ctl-stat {
-  background: var(--ctl-bg);
-  border-radius: var(--ctl-radius);
+  background: var(--ctl-soft);
+  border-radius: 20px;
   padding: 14px 10px;
   text-align: center;
   display: flex;
@@ -418,11 +571,12 @@ body {
 
 .ctl-stat-value {
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--ctl-green);
 }
 
 .ctl-stat-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ctl-muted);
 }
 
@@ -431,27 +585,23 @@ body {
   padding-left: 20px;
 }
 
+.ctl-summary .ctl-section {
+  margin-bottom: 8px;
+}
+
 code {
   font-size: 0.92em;
-  background: var(--ctl-bg);
-  padding: 1px 5px;
-  border-radius: 5px;
+  background: var(--ctl-soft);
+  padding: 1px 6px;
+  border-radius: 6px;
 }
 
 @media (max-width: 560px) {
   .ctl-card {
     padding: 22px 18px;
+    border-radius: 22px;
   }
   .ctl-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-}
-
-/* Inside a section, the gap already spaces the label from what follows. */
-.ctl-section > .ctl-label {
-  margin-bottom: 0;
-}
-
-.ctl-summary .ctl-section {
-  margin-bottom: 8px;
 }

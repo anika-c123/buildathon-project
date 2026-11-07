@@ -1,26 +1,40 @@
 /* Desk view (projector). Everything is sized in vw/vh so it scales with the
    projector's resolution, and kept large enough to read from about a meter.
-   Black background = no light on the desk; only the text glows. No red. */
+   Look: very dark forest green (dark = little light thrown on the desk),
+   cream text, a soft serif for the big words, lime for progress and the main
+   action, warm sand for breaks. No red (team rule). */
 
 .dsk-screen {
-  --dsk-bg: #0b0d10;
-  --dsk-ink: #eef1f4;
-  --dsk-soft: #9aa3ad;
-  --dsk-faint: #4a525c;
-  --dsk-teal: #72cfc2;
-  --dsk-teal-deep: #1f5f58;
-  --dsk-amber: #f0c27a;
-  --dsk-card: #161b22;
+  --dsk-bg: #0e1c14;
+  --dsk-glow: #1f3a29;
+  --dsk-ink: #f2f0e3;
+  --dsk-soft: #a9b7a5;
+  --dsk-faint: #45594a;
+  --dsk-lime: #dcef84;
+  --dsk-sage: #4f7a5a;
+  --dsk-sand: #e9c98b;
+  --dsk-card: #172a1f;
+  --dsk-serif: "Fraunces Variable", Georgia, serif;
+  --dsk-sans: "Figtree Variable", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
 
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: var(--dsk-bg);
+  background: radial-gradient(85% 70% at 100% 100%, var(--dsk-glow) 0%, transparent 60%), var(--dsk-bg);
   color: var(--dsk-ink);
-  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--dsk-sans);
   display: flex;
   flex-direction: column;
   cursor: default;
+}
+
+/* Soft serif for the big words: Fraunces with "softness" turned all the way up. */
+.dsk-brand,
+.dsk-step,
+.dsk-nudge-text,
+.dsk-nice {
+  font-family: var(--dsk-serif);
+  font-variation-settings: "SOFT" 100, "WONK" 0;
 }
 
 .dsk-center {
@@ -35,25 +49,25 @@
 }
 
 .dsk-brand {
-  font-size: clamp(32px, 5vw, 96px);
-  font-weight: 700;
+  font-size: clamp(30px, 4.4vw, 84px);
+  font-weight: 600;
   letter-spacing: -0.02em;
   margin: 0;
 }
 
 .dsk-idle-line {
-  font-size: clamp(20px, 2.4vw, 44px);
+  font-size: clamp(18px, 2.1vw, 40px);
   color: var(--dsk-soft);
   margin: 0;
 }
 
 .dsk-pulse {
-  width: 1.4vw;
-  height: 1.4vw;
-  min-width: 12px;
-  min-height: 12px;
+  width: 1.2vw;
+  height: 1.2vw;
+  min-width: 11px;
+  min-height: 11px;
   border-radius: 50%;
-  background: var(--dsk-amber);
+  background: var(--dsk-sand);
   animation: dsk-pulse 1.4s ease-in-out infinite;
 }
 
@@ -75,7 +89,8 @@
 
 .dsk-goal {
   margin: 0;
-  font-size: clamp(18px, 2vw, 38px);
+  font-size: clamp(16px, 1.7vw, 34px);
+  font-weight: 500;
   color: var(--dsk-soft);
   white-space: nowrap;
   overflow: hidden;
@@ -90,24 +105,25 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4vh;
+  gap: 3.6vh;
   text-align: center;
   padding: 0 7vw 6vh;
 }
 
 .dsk-kicker {
   margin: 0;
-  font-size: clamp(18px, 2.2vw, 42px);
-  font-weight: 600;
-  color: var(--dsk-teal);
-  letter-spacing: 0.02em;
+  font-size: clamp(14px, 1.6vw, 32px);
+  font-weight: 700;
+  color: var(--dsk-lime);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .dsk-step {
   margin: 0;
-  font-size: clamp(36px, 6vw, 120px);
-  line-height: 1.12;
-  font-weight: 700;
+  font-size: clamp(32px, 5.1vw, 104px);
+  line-height: 1.1;
+  font-weight: 600;
   letter-spacing: -0.02em;
   max-width: 20ch;
   animation: dsk-rise 0.6s ease-out;
@@ -127,25 +143,25 @@
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 2vw;
+  gap: 1.8vw;
 }
 
 .dsk-dot {
-  width: clamp(16px, 1.8vw, 34px);
-  height: clamp(16px, 1.8vw, 34px);
+  width: clamp(14px, 1.5vw, 30px);
+  height: clamp(14px, 1.5vw, 30px);
   border-radius: 50%;
   border: 3px solid var(--dsk-faint);
   transition: background 0.4s, border-color 0.4s, transform 0.4s;
 }
 
 .dsk-dot-done {
-  background: var(--dsk-teal);
-  border-color: var(--dsk-teal);
+  background: var(--dsk-lime);
+  border-color: var(--dsk-lime);
 }
 
 .dsk-dot-current {
-  border-color: var(--dsk-teal);
-  box-shadow: 0 0 0 0.5vw rgba(114, 207, 194, 0.15);
+  border-color: var(--dsk-lime);
+  box-shadow: 0 0 0 0.45vw rgba(220, 239, 132, 0.14);
 }
 
 .dsk-dot-pop {
@@ -158,18 +174,22 @@
   }
 }
 
-/* ---------- Buttons ---------- */
+/* ---------- Buttons (pills) ---------- */
 
 .dsk-btn {
   font: inherit;
-  font-size: clamp(18px, 2vw, 38px);
-  font-weight: 600;
+  font-size: clamp(15px, 1.6vw, 32px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--dsk-ink);
   background: transparent;
   border: 2px solid var(--dsk-faint);
   border-radius: 999px;
-  padding: 1.6vh 2.6vw;
+  padding: 1.4vh 2.4vw;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 1vw;
   transition: background 0.2s, border-color 0.2s, opacity 0.2s;
 }
 
@@ -182,30 +202,49 @@
   cursor: wait;
 }
 
+/* Main action: a lime pill with a dark circle and arrow at the end. */
 .dsk-btn-primary {
-  background: var(--dsk-teal);
-  border-color: var(--dsk-teal);
-  color: #062420;
+  background: var(--dsk-lime);
+  border-color: var(--dsk-lime);
+  color: #1c3324;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.7vh 0.7vh 0.7vh 2.4vw;
 }
 
 .dsk-btn-primary:hover {
-  background: #8fdcd1;
-  border-color: #8fdcd1;
+  background: #e8f6a4;
+  border-color: #e8f6a4;
+}
+
+.dsk-arrow {
+  width: clamp(30px, 3vw, 58px);
+  height: clamp(30px, 3vw, 58px);
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #1c3324;
+  color: var(--dsk-lime);
+}
+
+.dsk-arrow svg {
+  width: 52%;
+  height: 52%;
 }
 
 .dsk-btn-done {
-  border-color: var(--dsk-teal-deep);
-  color: var(--dsk-teal);
+  border-color: var(--dsk-sage);
+  color: var(--dsk-lime);
 }
 
 .dsk-btn-done:hover {
-  background: rgba(114, 207, 194, 0.1);
-  border-color: var(--dsk-teal);
+  background: rgba(220, 239, 132, 0.08);
+  border-color: var(--dsk-lime);
 }
 
 .dsk-btn-big {
-  font-size: clamp(20px, 2.4vw, 46px);
-  padding: 2vh 3.5vw;
+  font-size: clamp(16px, 1.9vw, 38px);
 }
 
 /* ---------- Celebration ---------- */
@@ -228,13 +267,13 @@
   height: clamp(8px, 0.8vw, 14px);
   margin: calc(clamp(8px, 0.8vw, 14px) / -2);
   border-radius: 50%;
-  background: var(--dsk-teal);
+  background: var(--dsk-lime);
   opacity: 0;
   animation: dsk-spark 0.9s ease-out var(--delay) forwards;
 }
 
 .dsk-spark:nth-child(3n + 1) {
-  background: var(--dsk-amber);
+  background: var(--dsk-sand);
 }
 
 @keyframes dsk-spark {
@@ -244,7 +283,7 @@
   }
   100% {
     opacity: 0;
-    transform: rotate(var(--angle)) translateY(-11vw) scale(0.4);
+    transform: rotate(var(--angle)) translateY(-10vw) scale(0.4);
   }
 }
 
@@ -253,9 +292,10 @@
   left: 100%;
   top: 50%;
   margin-left: 2vw;
-  font-size: clamp(22px, 2.6vw, 50px);
-  font-weight: 700;
-  color: var(--dsk-amber);
+  font-size: clamp(20px, 2.3vw, 46px);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--dsk-sand);
   white-space: nowrap;
   animation: dsk-nice 1.5s ease-out forwards;
 }
@@ -283,18 +323,19 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: clamp(8px, 1.4vh, 16px);
-  background: #14181d;
+  height: clamp(8px, 1.3vh, 15px);
+  background: #142419;
 }
 
 .dsk-timebar-fill {
   height: 100%;
-  background: #2f8a80;
+  background: var(--dsk-sage);
+  border-radius: 0 999px 999px 0;
   transition: width 1s linear;
 }
 
 .dsk-timebar.is-paused .dsk-timebar-fill {
-  background: #8a6d3b;
+  background: #8a7448;
 }
 
 /* ---------- Welcome back ---------- */
@@ -304,14 +345,14 @@
   top: 12vh;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 80vw;
+  max-width: 78vw;
   background: var(--dsk-card);
-  border: 2px solid var(--dsk-teal-deep);
+  border: 2px solid var(--dsk-sage);
   border-radius: 999px;
-  padding: 1.6vh 3vw;
-  font-size: clamp(18px, 2.2vw, 42px);
+  padding: 1.4vh 2.8vw;
+  font-size: clamp(16px, 1.9vw, 38px);
   font-weight: 600;
-  color: var(--dsk-teal);
+  color: var(--dsk-lime);
   text-align: center;
   z-index: 5;
   animation: dsk-reentry 8s ease forwards;
@@ -339,7 +380,7 @@
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(11, 13, 16, 0.72);
+  background: rgba(14, 28, 20, 0.74);
   z-index: 10;
   animation: dsk-fade 0.8s ease;
 }
@@ -351,30 +392,32 @@
 }
 
 .dsk-nudge {
-  width: min(78vw, 1400px);
+  width: min(76vw, 1400px);
   background: var(--dsk-card);
-  border: 2px solid var(--dsk-teal-deep);
+  border: 2px solid var(--dsk-sage);
   border-radius: 3vw;
   padding: 6vh 5vw;
   text-align: center;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 5vh;
   animation: dsk-rise 0.8s ease-out;
 }
 
 .dsk-nudge-text {
   margin: 0;
-  font-size: clamp(30px, 4.4vw, 88px);
-  line-height: 1.15;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: clamp(26px, 3.7vw, 74px);
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .dsk-nudge-buttons {
   display: flex;
   justify-content: center;
-  gap: 2vw;
+  align-items: center;
+  gap: 1.8vw;
   flex-wrap: wrap;
 }
 
@@ -386,37 +429,37 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4vh;
+  gap: 3.6vh;
   text-align: center;
   padding: 0 7vw 6vh;
 }
 
 .dsk-kicker-break {
-  color: var(--dsk-amber);
+  color: var(--dsk-sand);
 }
 
 .dsk-break-title {
-  font-size: clamp(32px, 5vw, 100px);
+  font-size: clamp(28px, 4.3vw, 88px);
 }
 
 .dsk-breakbar {
-  width: min(50vw, 900px);
-  height: clamp(10px, 1.6vh, 18px);
+  width: min(46vw, 860px);
+  height: clamp(10px, 1.5vh, 17px);
   border-radius: 999px;
-  background: #1c1912;
+  background: #1d2a1d;
   overflow: hidden;
 }
 
 .dsk-breakbar-fill {
   height: 100%;
-  background: var(--dsk-amber);
+  background: var(--dsk-sand);
   border-radius: 999px;
   transition: width 1s linear;
 }
 
 .dsk-break-next {
   margin: 0;
-  font-size: clamp(18px, 2.2vw, 42px);
+  font-size: clamp(16px, 1.9vw, 38px);
   color: var(--dsk-soft);
 }
 
@@ -424,13 +467,13 @@
 
 .dsk-park-btn {
   font: inherit;
-  font-size: clamp(16px, 1.7vw, 32px);
-  font-weight: 600;
+  font-size: clamp(14px, 1.45vw, 28px);
+  font-weight: 700;
   color: var(--dsk-soft);
   background: transparent;
   border: 2px solid var(--dsk-faint);
   border-radius: 999px;
-  padding: 1vh 1.8vw;
+  padding: 0.9vh 1.6vw;
   cursor: pointer;
   white-space: nowrap;
   flex: none;
@@ -449,18 +492,22 @@
 
 .dsk-park-input {
   font: inherit;
-  font-size: clamp(16px, 1.7vw, 32px);
+  font-size: clamp(14px, 1.45vw, 28px);
   color: var(--dsk-ink);
   background: var(--dsk-card);
-  border: 2px solid var(--dsk-teal-deep);
+  border: 2px solid var(--dsk-sage);
   border-radius: 999px;
-  padding: 1vh 1.8vw;
-  width: min(36vw, 640px);
+  padding: 0.9vh 1.6vw;
+  width: min(34vw, 620px);
+}
+
+.dsk-park-input::placeholder {
+  color: var(--dsk-faint);
 }
 
 .dsk-park-input:focus {
   outline: none;
-  border-color: var(--dsk-teal);
+  border-color: var(--dsk-lime);
 }
 
 .dsk-parked {
@@ -469,15 +516,15 @@
   bottom: 5vh;
   max-width: 30vw;
   color: var(--dsk-soft);
-  font-size: clamp(14px, 1.5vw, 28px);
+  font-size: clamp(13px, 1.3vw, 25px);
 }
 
 .dsk-parked-title {
   margin: 0 0 0.6vh;
-  font-size: 0.8em;
-  font-weight: 600;
+  font-size: 0.78em;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--dsk-faint);
 }
 
