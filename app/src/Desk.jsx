@@ -1,60 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage } from "./connection.js";
+import { useQuote, useQuoteRotation } from "./quotes.js";
+import { useSessionTime } from "./timer.js";
+import { useDeskHeartbeat, useDeskSettings } from "./deskSettings.js";
+import FocusTree from "./FocusTree.jsx";
 import "./desk.css";
 
 // The desk view (http://localhost:5173/desk), projected onto the desk.
 //
 // DISPLAY ONLY: a projection can't be clicked, so there are no buttons here.
-// Every button (step done, break, park, nudge answers) lives on the laptop's
-// control screen. This page just draws the latest session_update as glowing
-// outlined panels on black (black = no light, so only the panels show up on
-// the desk), arranged around a dashed zone where the laptop sits.
+// Every button (step done, break, park, nudge answers, quotes, display
+// settings) lives on the laptop's control screen. This page just draws the
+// latest session_update: panels along the top (current step, progress + time,
+// quote + focus tree) and an open, unlit "laptop space" across the bottom for
+// the laptop and paper. Black projects no light, so only lines and text show.
 
 const REENTRY_SHOW_MS = 8000; // contract §5: show a welcome-back for about 8 seconds
 const CELEBRATE_MS = 1600;
-
-// Re-renders every second so the time bars move.
-function useNow(intervalMs = 1000) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
-
-// Time spent on breaks this session, measured here in the app, so the session
-// time bar can pause during a break (CLAUDE.md: "the timer runs inside the app").
-// Resets when a new session starts. If the page is reloaded mid-session, breaks
-// before the reload aren't counted, which is fine for a demo.
-function useBreakTime(data) {
-  const total = useRef(0);
-  const breakStart = useRef(null);
-  const session = useRef(null);
-  const [, force] = useState(0);
-
-  const startedAt = data?.started_at ?? null;
-  const onBreak = data?.status === "break";
-
-  useEffect(() => {
-    if (startedAt !== session.current) {
-      session.current = startedAt;
-      total.current = 0;
-      breakStart.current = null;
-    }
-    if (onBreak && breakStart.current === null) {
-      breakStart.current = Date.now();
-      force((n) => n + 1);
-    } else if (!onBreak && breakStart.current !== null) {
-      total.current += Date.now() - breakStart.current;
-      breakStart.current = null;
-      force((n) => n + 1);
-    }
-  }, [startedAt, onBreak]);
-
-  return (now) => total.current + (breakStart.current !== null ? now - breakStart.current : 0);
-}
 
 // Remembers when the current break began, so the break bar knows its full length.
 function useBreakLength(data) {
@@ -69,8 +32,11 @@ function useBreakLength(data) {
 
 export default function Desk() {
   const { connected, data } = useSessionUpdate();
-  const now = useNow();
-  const breakTime = useBreakTime(data);
+  const settings = useDeskSettings(); // dark/light + what to show, set on the laptop
+  useDeskHeartbeat(); // lets the laptop show "Projector connected"
+  const time = useSessionTime(data);
+  useQuoteRotation(data); // new quote each session and every 30 minutes
+  const now = time.now;
   const breakLength = useBreakLength(data);
 
   // Welcome-back message, shown for 8 seconds.
@@ -126,6 +92,7 @@ export default function Desk() {
       <Screen>
         <div className="dsk-solo">
           <Panel className="dsk-solo-panel">
+            <span className="dsk-orb" aria-hidden="true" />
             <p className="dsk-brand">PLocked</p>
             <p className="dsk-solo-line">Start a session on the laptop.</p>
           </Panel>
@@ -135,14 +102,11 @@ export default function Desk() {
   }
 
   const onBreak = data.status === "break";
-  const total = Math.max(1, (data.ends_at ?? 0) - (data.started_at ?? 0));
-  const focusedMs = Math.max(0, now - data.started_at - breakTime(now));
-  const timeLeft = clamp01(1 - focusedMs / total);
   const breakLeft = data.break_ends_at ? clamp01((data.break_ends_at - now) / breakLength) : 0;
 
   return (
     <Screen>
-      <div className="dsk-grid">
+      <div className={`dsk-grid ${settings.showQuote || settings.showTree ? "" : "no-side"}`}>
         <NowPanel
           data={data}
           steps={steps}
@@ -152,12 +116,17 @@ export default function Desk() {
           reentry={reentry}
           celebration={celebration}
         />
-        <TimePanel timeLeft={timeLeft} onBreak={onBreak} goal={data.goal} />
-        <ParkedPanel items={data.parked} />
+        <ProgressPanel steps={steps} time={time} onBreak={onBreak} showTimer={settings.showTimer} />
+        {(settings.showQuote || settings.showTree) && (
+          <QuoteTreePanel
+            showQuote={settings.showQuote}
+            showTree={settings.showTree}
+            tree={<FocusTree focusedMs={time.focusedMs} stepsDone={doneCount} stepsTotal={steps.length} />}
+          />
+        )}
         <div className="dsk-laptop-zone" aria-hidden="true">
-          <span>laptop</span>
+          <span>Laptop space</span>
         </div>
-        <StatusPanel activity={data.activity} camera={data.camera} />
       </div>
     </Screen>
   );
@@ -167,8 +136,10 @@ function clamp01(x) {
   return Math.min(1, Math.max(0, x));
 }
 
+// The theme (dark or light desk) is picked on the laptop; see deskSettings.js.
 function Screen({ children }) {
-  return <div className="dsk-screen">{children}</div>;
+  const { theme } = useDeskSettings();
+  return <div className={`dsk-screen dsk-theme-${theme}`}>{children}</div>;
 }
 
 function Panel({ className = "", tone = "", children }) {
@@ -189,7 +160,7 @@ function NowPanel({ data, steps, onBreak, breakLeft, breakOver, reentry, celebra
         <h1 className="dsk-big dsk-nudge-text" key={nudge.id}>
           {nudge.message}
         </h1>
-        <p className="dsk-hint">Answer on your laptop · Back to work · Break · This is relevant</p>
+        <p className="dsk-hint">Answer on your laptop · Back to work, Break, or This is relevant</p>
       </Panel>
     );
   }
@@ -215,15 +186,22 @@ function NowPanel({ data, steps, onBreak, breakLeft, breakOver, reentry, celebra
           {reentry.text}
         </p>
       ) : (
-        <p className="dsk-kicker">{allDone ? `All ${steps.length} steps done` : `Step ${i + 1} of ${steps.length}`}</p>
+        <div className="dsk-now-head">
+          <p className="dsk-kicker">{allDone ? `All ${steps.length} steps done` : `Step ${i + 1} of ${steps.length}`}</p>
+          <p className="dsk-now-goal">{data.goal}</p>
+        </div>
       )}
       <h1 className="dsk-big" key={i}>
-        {allDone ? "Nice work. Wrap up on the laptop." : steps[i]?.text}
+        {allDone ? "Nice work!" : steps[i]?.text}
       </h1>
-      <div className="dsk-dots-row">
-        <Dots steps={steps} current={i} celebrating={celebration !== null} />
-        {celebration && <Celebration key={celebration} />}
-      </div>
+      {allDone ? (
+        <DoneParked items={data.parked} />
+      ) : (
+        <div className="dsk-dots-row">
+          <Dots steps={steps} current={i} celebrating={celebration !== null} />
+          {celebration && <Celebration key={celebration} />}
+        </div>
+      )}
     </Panel>
   );
 }
@@ -261,72 +239,77 @@ function Celebration() {
   );
 }
 
-// ---------- Time: shrinking bar, no numbers ----------
+// ---------- Progress + time ----------
+// Thick bar: steps done, matching the laptop's progress bar.
+// Time bar under it: time left, sliding down smoothly, no numbers. Pauses on a break.
 
-function TimePanel({ timeLeft, onBreak, goal }) {
+function ProgressPanel({ steps, time, onBreak, showTimer }) {
+  const done = steps.filter((s) => s.done).length;
+  const fraction = steps.length ? done / steps.length : 0;
   return (
     <Panel className="dsk-time">
-      <p className="dsk-label">{onBreak ? "Session · paused" : "Session"}</p>
-      <p className="dsk-goal">{goal}</p>
-      <div className={`dsk-bar ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
-        <div className="dsk-bar-fill" style={{ width: `${timeLeft * 100}%` }} />
+      <p className="dsk-label">
+        Progress · {done} of {steps.length} steps
+      </p>
+      <div className="dsk-bar" aria-hidden="true">
+        <div className="dsk-bar-fill" style={{ width: `${fraction * 100}%` }} />
       </div>
-    </Panel>
-  );
-}
-
-// ---------- Parked thoughts ----------
-
-function ParkedPanel({ items }) {
-  const list = items ?? [];
-  return (
-    <Panel className="dsk-parked">
-      <p className="dsk-label">Parked for later</p>
-      {list.length === 0 ? (
-        <p className="dsk-quiet">Nothing yet</p>
-      ) : (
-        <ul>
-          {list.slice(-3).map((item, k) => (
-            <li key={`${item.timestamp}-${k}`}>{item.text}</li>
-          ))}
-        </ul>
+      {showTimer && (
+        <>
+          <p className="dsk-label dsk-time-label">{onBreak ? "Time · paused" : "Time"}</p>
+          <div className={`dsk-timeline ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
+            <div className="dsk-timeline-fill" style={{ width: `${time.fraction * 100}%` }} />
+          </div>
+        </>
       )}
     </Panel>
   );
 }
 
-// ---------- Status: what PLocked currently sees ----------
+// ---------- Quote + focus tree (changed from the laptop) ----------
 
-const ACTIVITY_WORDS = {
-  relevant: "on task",
-  unrelated: "off task",
-  uncertain: "not sure",
-  unknown: "—",
-};
-
-const CAMERA_WORDS = {
-  present: "at desk",
-  away: "away",
-  phone_in_hand: "phone in hand",
-  unknown: "off",
-};
-
-function StatusPanel({ activity, camera }) {
-  const label = activity?.label ?? "unknown";
-  const cam = camera?.state ?? "unknown";
+// Quote on the left, focus tree on the right, in one panel. Either can be
+// switched off from the laptop's "Projector display" card.
+function QuoteTreePanel({ showQuote, showTree, tree }) {
+  const quote = useQuote();
   return (
-    <Panel className="dsk-status">
-      <p className="dsk-label">PLocked sees</p>
-      <div className="dsk-status-row">
-        <span className={`dsk-led dsk-led-${label}`} aria-hidden="true" />
-        <span className="dsk-status-name">{activity?.domain ?? "no site yet"}</span>
-        <span className="dsk-status-word">{ACTIVITY_WORDS[label] ?? label}</span>
-      </div>
-      <div className="dsk-status-row">
-        <span className={`dsk-led dsk-led-cam-${cam}`} aria-hidden="true" />
-        <span className="dsk-status-name">camera</span>
-        <span className="dsk-status-word">{CAMERA_WORDS[cam] ?? cam}</span>
+    <Panel className="dsk-quote">
+      <div className="dsk-quote-row">
+        {showQuote && (
+          <div className="dsk-quote-col">
+            <p className="dsk-label">A little push</p>
+            <p className="dsk-quote-text" key={quote.text}>
+              “{quote.text}”
+            </p>
+            {quote.author && <p className="dsk-quote-author">— {quote.author}</p>}
+          </div>
+        )}
+        {showTree && (
+          <div className="dsk-tree-col">
+            {!showQuote && <p className="dsk-label">Focus tree</p>}
+            {tree}
+          </div>
+        )}
       </div>
     </Panel>
+  );
+}
+
+// ---------- Parked thoughts (only once every step is done) ----------
+// While working, parked thoughts stay off the desk (out of sight, so they don't
+// pull attention). When all steps are done, they show here as "what's next".
+
+function DoneParked({ items }) {
+  const list = items ?? [];
+  if (list.length === 0) return <p className="dsk-hint dsk-done-parked-none">Nothing parked. Enjoy the win.</p>;
+  return (
+    <div className="dsk-done-parked">
+      <p className="dsk-label">Parked for later</p>
+      <ul>
+        {list.slice(-4).map((item, k) => (
+          <li key={`${item.timestamp}-${k}`}>{item.text}</li>
+        ))}
+      </ul>
+    </div>
   );
 }

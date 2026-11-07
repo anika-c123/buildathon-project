@@ -1,17 +1,26 @@
 /* Desk view: projected onto the desk, display only.
-   Pure black background (black = no light from the projector, so the desk
-   shows through) with glowing cream outlined panels, like a desk UI drawn
-   in light. Sizes in vw/vh so it scales with any projector. No red. */
+   Same soft "glass" mood as the laptop (peach, pink, lavender, a glossy orb),
+   but drawn as OUTLINES ONLY: every panel's inside is pure black, and black is
+   "no light" on a projector, so on a dark desk you see just glowing outlines
+   and text, never a white box. Sizes in vw/vh to fit any projector. No red. */
 
 .dsk-screen {
-  --dsk-ink: #f3eedc;
-  --dsk-soft: #bdb7a3;
-  --dsk-faint: #5c584d;
-  --dsk-line: #efe9d4;
-  --dsk-lime: #dcef84;
-  --dsk-sand: #ebc98a;
-  --dsk-serif: "Fraunces Variable", Georgia, serif;
+  --dsk-ink: #fff6f1;
+  --dsk-soft: #cdbfc9;
+  --dsk-faint: #6b5f6c;
+  --dsk-peach: #ffb08c;
+  --dsk-pink: #f5a3c7;
+  --dsk-lilac: #c8b4f5;
+  --dsk-edge: linear-gradient(135deg, #ffc4a6 0%, #f5a3c7 50%, #c8b4f5 100%);
   --dsk-sans: "Figtree Variable", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+  /* Colours that light mode swaps (see the end of the file). */
+  --dsk-fill: #000; /* inside of each panel: black = no light */
+  --dsk-accent-grad: var(--dsk-edge); /* kicker text, progress fill */
+  --dsk-time-grad: linear-gradient(90deg, #f3e9ef, #cdbfc9);
+  --dsk-on: #b9e6c9; /* "on task" / "at desk" light */
+  --tree-trunk: #e6d6cf;
+  --tree-leaf-a: #ffc4a6;
+  --tree-leaf-b: #c8b4f5;
 
   position: fixed;
   inset: 0;
@@ -22,20 +31,30 @@
   cursor: none; /* hide the mouse pointer on the projection */
 }
 
-/* ---------- Layout ---------- */
-/*  [ Now (big)           ][ Time   ]
-    [ Parked ][ laptop    ][ Status ]  */
+/* ---------- Layout ----------
+    [ Now (step), the biggest ][ Progress ][ Quote + tree ]
+    [ laptop space (dotted), same left and right edges as the top row ]
+   Panels only along the top; the bottom ~two-thirds is left unlit for the
+   laptop and paper. */
 
 .dsk-grid {
   position: absolute;
-  inset: 4vh 3vw;
+  inset: 3.5vh 2.6vw;
   display: grid;
-  grid-template-columns: 1fr 1.15fr 1fr;
-  grid-template-rows: 1.35fr 1fr;
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.95fr) minmax(0, 1.25fr);
+  grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.4fr);
   grid-template-areas:
-    "now now time"
-    "parked laptop status";
-  gap: 2.4vw;
+    "now time quote"
+    "laptop laptop laptop";
+  gap: 2.4vh 1.6vw;
+}
+
+/* Quote and tree both switched off: the step panel takes the space. */
+.dsk-grid.no-side {
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr);
+  grid-template-areas:
+    "now time"
+    "laptop laptop";
 }
 
 .dsk-now {
@@ -44,74 +63,88 @@
 .dsk-time {
   grid-area: time;
 }
-.dsk-parked {
-  grid-area: parked;
-}
-.dsk-status {
-  grid-area: status;
+.dsk-quote {
+  grid-area: quote;
 }
 
-/* ---------- Glowing panel ---------- */
+/* ---------- Glass outline panel ----------
+   The gradient sits on the border only; the inside (padding-box) is black. */
 
 .dsk-panel {
   position: relative;
-  border: clamp(2px, 0.22vw, 4px) solid var(--dsk-line);
-  border-radius: 2.2vw;
-  padding: 3.4vh 2.4vw;
+  border: clamp(2px, 0.2vw, 4px) solid transparent;
+  border-radius: 2.4vw;
+  background:
+    linear-gradient(var(--dsk-fill), var(--dsk-fill)) padding-box,
+    var(--dsk-edge) border-box;
+  padding: 2.6vh 1.8vw;
   box-shadow:
-    0 0 1.2vw rgba(239, 233, 212, 0.28),
-    inset 0 0 1.2vw rgba(239, 233, 212, 0.1);
+    0 0 1.4vw rgba(245, 163, 199, 0.22),
+    inset 0 0 1.6vw rgba(200, 180, 245, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 2vh;
+  gap: 1.6vh;
   min-width: 0;
   min-height: 0;
-  transition: border-color 0.6s, box-shadow 0.6s;
+  overflow: hidden;
 }
 
+/* Nudge: the box turns red and pulses so it's hard to miss. Only the
+   OUTLINE is red; the inside stays black so the desk isn't flooded red. */
 .dsk-tone-nudge {
-  border-color: var(--dsk-lime);
-  animation: dsk-breathe 3s ease-in-out infinite;
+  border-width: clamp(3px, 0.32vw, 6px);
+  background:
+    linear-gradient(var(--dsk-fill), var(--dsk-fill)) padding-box,
+    linear-gradient(135deg, #ff7a7a, #ff3b4f 50%, #ff6a3d) border-box;
+  animation: dsk-alarm 1.2s ease-in-out infinite;
 }
 
-@keyframes dsk-breathe {
+@keyframes dsk-alarm {
   0%,
   100% {
     box-shadow:
-      0 0 1.2vw rgba(220, 239, 132, 0.3),
-      inset 0 0 1.2vw rgba(220, 239, 132, 0.1);
+      0 0 1.4vw rgba(255, 59, 79, 0.45),
+      inset 0 0 1.4vw rgba(255, 59, 79, 0.15);
   }
   50% {
     box-shadow:
-      0 0 2.6vw rgba(220, 239, 132, 0.55),
-      inset 0 0 1.8vw rgba(220, 239, 132, 0.18);
+      0 0 3.6vw rgba(255, 59, 79, 0.85),
+      inset 0 0 2.4vw rgba(255, 59, 79, 0.3);
   }
 }
 
+.dsk-tone-nudge .dsk-kicker {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: #ff6b74;
+}
+
 .dsk-tone-break {
-  border-color: var(--dsk-sand);
+  background:
+    linear-gradient(var(--dsk-fill), var(--dsk-fill)) padding-box,
+    linear-gradient(135deg, #e2d6ff, #c8b4f5 50%, #9fb7f0) border-box;
   box-shadow:
-    0 0 1.2vw rgba(235, 201, 138, 0.3),
-    inset 0 0 1.2vw rgba(235, 201, 138, 0.1);
+    0 0 1.4vw rgba(200, 180, 245, 0.3),
+    inset 0 0 1.4vw rgba(200, 180, 245, 0.1);
 }
 
-.dsk-tone-welcome {
-  border-color: var(--dsk-lime);
-}
-
-/* The spot where the laptop sits: just a dashed outline, nothing projected inside. */
+/* Where the laptop and paper go: a dotted outline lined up with the panels
+   above (same left and right edges), nothing projected inside. The small
+   label sits in the bottom-left corner, out of the way. */
 .dsk-laptop-zone {
   grid-area: laptop;
-  border: clamp(2px, 0.18vw, 3px) dashed var(--dsk-faint);
-  border-radius: 2.2vw;
-  display: grid;
-  place-items: end center;
-  padding-bottom: 2vh;
+  border: clamp(2px, 0.18vw, 3px) dotted var(--dsk-faint);
+  border-radius: 2.4vw;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 2vh 1.8vw;
 }
 
 .dsk-laptop-zone span {
-  font-size: clamp(11px, 1vw, 20px);
-  letter-spacing: 0.2em;
+  font-size: clamp(10px, 0.9vw, 19px);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--dsk-faint);
 }
@@ -120,24 +153,46 @@
 
 .dsk-label {
   margin: 0;
-  font-size: clamp(11px, 1.05vw, 22px);
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: clamp(10px, 0.95vw, 20px);
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--dsk-soft);
 }
 
 .dsk-kicker {
   margin: 0;
-  font-size: clamp(13px, 1.45vw, 30px);
+  font-size: clamp(12px, 1.3vw, 27px);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--dsk-lime);
+  background: var(--dsk-accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
-.dsk-tone-break .dsk-kicker {
-  color: var(--dsk-sand);
+.dsk-now-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5vw;
+  min-width: 0;
+}
+
+.dsk-now-head .dsk-kicker {
+  flex: none;
+}
+
+.dsk-now-goal {
+  margin: 0;
+  min-width: 0;
+  font-size: clamp(11px, 1.1vw, 23px);
+  font-weight: 500;
+  color: var(--dsk-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dsk-welcome {
@@ -148,38 +203,35 @@
 
 .dsk-big {
   margin: 0;
-  font-family: var(--dsk-serif);
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  font-size: clamp(26px, 4.1vw, 88px);
-  line-height: 1.1;
+  font-size: clamp(24px, 3.5vw, 76px);
+  line-height: 1.08;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   animation: dsk-rise 0.6s ease-out;
 }
 
 .dsk-nudge-text {
-  font-size: clamp(24px, 3.6vw, 78px);
+  font-size: clamp(22px, 3.1vw, 68px);
 }
 
 .dsk-hint {
   margin: auto 0 0;
-  font-size: clamp(12px, 1.25vw, 26px);
+  font-size: clamp(11px, 1.15vw, 24px);
   color: var(--dsk-soft);
 }
 
 .dsk-quiet {
   margin: 0;
-  font-size: clamp(13px, 1.4vw, 28px);
+  font-size: clamp(12px, 1.25vw, 26px);
   color: var(--dsk-faint);
 }
 
 .dsk-goal {
   margin: 0;
-  font-family: var(--dsk-serif);
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  font-size: clamp(16px, 1.9vw, 40px);
+  font-size: clamp(14px, 1.55vw, 34px);
   font-weight: 600;
   line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 @keyframes dsk-rise {
@@ -189,31 +241,60 @@
   }
 }
 
-/* ---------- Bars (session time, break) ---------- */
+/* ---------- Progress + time ----------
+   Thick bar = steps done. "40 min left" = time in calm 10-minute steps.
+   The bar under it = the detailed time left, sliding down smoothly. */
 
 .dsk-bar {
-  margin-top: auto;
-  height: clamp(10px, 1.6vh, 20px);
+  height: clamp(14px, 3vh, 34px);
   border-radius: 999px;
   border: 2px solid var(--dsk-faint);
-  overflow: hidden;
+  padding: 3px;
+  flex: none;
 }
 
 .dsk-bar-fill {
   height: 100%;
-  background: var(--dsk-ink);
+  min-width: 0;
   border-radius: 999px;
+  background: var(--dsk-accent-grad);
+  box-shadow: 0 0 1vw rgba(245, 163, 199, 0.45);
+  transition: width 0.9s cubic-bezier(0.34, 1.4, 0.64, 1); /* a little bounce when a step is done */
+}
+
+.dsk-time-label {
+  margin-top: auto;
+}
+
+.dsk-timeline {
+  height: clamp(9px, 1.7vh, 20px);
+  border-radius: 999px;
+  border: 2px solid var(--dsk-faint);
+  padding: 2px;
+  flex: none;
+}
+
+.dsk-timeline-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--dsk-time-grad);
   transition: width 1s linear;
 }
 
-.dsk-bar.is-paused .dsk-bar-fill,
-.dsk-bar-break .dsk-bar-fill {
-  background: var(--dsk-sand);
+.dsk-timeline.is-paused .dsk-timeline-fill {
+  background: var(--dsk-lilac);
 }
 
+/* The break bar inside the Now panel. */
 .dsk-bar-break {
-  margin-top: 0;
   width: 70%;
+  margin-top: 0;
+}
+
+.dsk-bar-break .dsk-bar-fill {
+  background: linear-gradient(90deg, #e2d6ff, #c8b4f5);
+  box-shadow: 0 0 1vw rgba(200, 180, 245, 0.45);
+  transition: width 1s linear;
 }
 
 /* ---------- Progress dots + celebration ---------- */
@@ -229,21 +310,21 @@
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 1.4vw;
+  gap: 1.2vw;
 }
 
 .dsk-dot {
-  width: clamp(13px, 1.4vw, 28px);
-  height: clamp(13px, 1.4vw, 28px);
+  width: clamp(12px, 1.25vw, 26px);
+  height: clamp(12px, 1.25vw, 26px);
   border-radius: 50%;
-  border: 3px solid var(--dsk-faint);
+  border: 2px solid var(--dsk-faint);
   transition: background 0.4s, border-color 0.4s, transform 0.4s;
 }
 
 .dsk-dot-done {
-  background: var(--dsk-lime);
-  border-color: var(--dsk-lime);
-  box-shadow: 0 0 0.8vw rgba(220, 239, 132, 0.5);
+  border-color: transparent;
+  background: radial-gradient(circle at 35% 30%, #ffe1d1, #ffb08c 45%, #e27a9c 80%);
+  box-shadow: 0 0 0.8vw rgba(255, 176, 140, 0.55);
 }
 
 .dsk-dot-current {
@@ -270,17 +351,21 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: clamp(7px, 0.7vw, 13px);
-  height: clamp(7px, 0.7vw, 13px);
-  margin: calc(clamp(7px, 0.7vw, 13px) / -2);
+  width: clamp(7px, 0.65vw, 12px);
+  height: clamp(7px, 0.65vw, 12px);
+  margin: calc(clamp(7px, 0.65vw, 12px) / -2);
   border-radius: 50%;
-  background: var(--dsk-lime);
+  background: var(--dsk-peach);
   opacity: 0;
   animation: dsk-spark 0.9s ease-out var(--delay) forwards;
 }
 
 .dsk-spark:nth-child(3n + 1) {
-  background: var(--dsk-sand);
+  background: var(--dsk-lilac);
+}
+
+.dsk-spark:nth-child(3n + 2) {
+  background: var(--dsk-pink);
 }
 
 @keyframes dsk-spark {
@@ -290,7 +375,7 @@
   }
   100% {
     opacity: 0;
-    transform: rotate(var(--angle)) translateY(-7vw) scale(0.4);
+    transform: rotate(var(--angle)) translateY(-6vw) scale(0.4);
   }
 }
 
@@ -298,13 +383,10 @@
   position: absolute;
   left: 100%;
   top: 50%;
-  margin-left: 2vw;
-  font-family: var(--dsk-serif);
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  font-size: clamp(18px, 2.1vw, 44px);
-  font-weight: 600;
-  font-style: italic;
-  color: var(--dsk-sand);
+  margin-left: 1.6vw;
+  font-size: clamp(16px, 1.8vw, 38px);
+  font-weight: 700;
+  color: var(--dsk-peach);
   white-space: nowrap;
   animation: dsk-nice 1.5s ease-out forwards;
 }
@@ -324,75 +406,48 @@
   }
 }
 
-/* ---------- Parked ---------- */
+/* ---------- Quote + focus tree ---------- */
 
-.dsk-parked ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.dsk-quote-row {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 1.2vw;
+}
+
+.dsk-quote-col {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.8vh;
-  font-size: clamp(13px, 1.4vw, 28px);
+  gap: 1.4vh;
 }
 
-.dsk-parked li {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dsk-parked li::before {
-  content: "· ";
-  color: var(--dsk-soft);
-}
-
-/* ---------- Status ---------- */
-
-.dsk-status-row {
+.dsk-tree-col {
+  flex: 1.15 1 0;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 0.9vw;
-  font-size: clamp(13px, 1.35vw, 28px);
-  min-width: 0;
+  flex-direction: column;
+  gap: 1vh;
 }
 
-.dsk-status-name {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
+
+.dsk-quote-text {
+  margin: 0;
+  font-size: clamp(12px, 1.3vw, 28px);
+  line-height: 1.35;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  animation: dsk-rise 0.8s ease-out;
 }
 
-.dsk-status-word {
+.dsk-quote-author {
+  margin: auto 0 0;
+  font-size: clamp(10px, 1vw, 21px);
   color: var(--dsk-soft);
-  white-space: nowrap;
-}
-
-.dsk-led {
-  width: clamp(9px, 0.9vw, 18px);
-  height: clamp(9px, 0.9vw, 18px);
-  flex: none;
-  border-radius: 50%;
-  background: var(--dsk-faint);
-}
-
-.dsk-led-relevant,
-.dsk-led-cam-present {
-  background: var(--dsk-lime);
-  box-shadow: 0 0 0.7vw rgba(220, 239, 132, 0.6);
-}
-
-.dsk-led-unrelated,
-.dsk-led-cam-phone_in_hand {
-  background: var(--dsk-sand);
-  box-shadow: 0 0 0.7vw rgba(235, 201, 138, 0.6);
-}
-
-.dsk-led-uncertain,
-.dsk-led-cam-away {
-  background: var(--dsk-soft);
 }
 
 /* ---------- Idle / connecting ---------- */
@@ -410,18 +465,25 @@
   padding: 5vh 5vw;
 }
 
+/* The glossy orb from the laptop screen, small so it throws little light. */
+.dsk-orb {
+  width: clamp(28px, 3.6vw, 72px);
+  height: clamp(28px, 3.6vw, 72px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff1e8 0%, #ffbf9f 22%, #f2876f 50%, #c9567a 78%, #8e5aa6 100%);
+  box-shadow: 0 0 2vw rgba(242, 135, 111, 0.45);
+}
+
 .dsk-brand {
   margin: 0;
-  font-family: var(--dsk-serif);
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  font-size: clamp(28px, 4vw, 80px);
+  font-size: clamp(26px, 3.6vw, 76px);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .dsk-solo-line {
   margin: 0;
-  font-size: clamp(15px, 1.7vw, 34px);
+  font-size: clamp(14px, 1.6vw, 32px);
   color: var(--dsk-soft);
 }
 
@@ -429,7 +491,7 @@
   width: clamp(10px, 1vw, 20px);
   height: clamp(10px, 1vw, 20px);
   border-radius: 50%;
-  background: var(--dsk-sand);
+  background: var(--dsk-peach);
   animation: dsk-pulse 1.4s ease-in-out infinite;
 }
 
@@ -447,4 +509,174 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---------- Focus tree ---------- */
+
+.dsk-tree {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.dsk-tree svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: visible;
+}
+
+.dsk-tree-ground {
+  fill: none;
+  stroke: var(--dsk-faint);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.dsk-tree-trunk {
+  fill: none;
+  stroke: var(--tree-trunk);
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: d 1.5s ease;
+}
+
+.dsk-tree-branch {
+  fill: none;
+  stroke: var(--tree-trunk);
+  stroke-width: 3;
+  stroke-linecap: round;
+  animation: dsk-grow-in 1.2s ease-out;
+}
+
+/* A very faint fill makes the overlapping circles read as one leafy shape. */
+.dsk-tree-leaf {
+  fill: url(#tree-leaf);
+  fill-opacity: 0.1;
+  stroke: url(#tree-leaf);
+  stroke-width: 2.5;
+  transition: r 1.5s ease, cx 1.5s ease, cy 1.5s ease;
+  animation: dsk-grow-in 1.2s ease-out;
+}
+
+.dsk-tree-marble {
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 3px rgba(242, 135, 111, 0.55));
+  animation: dsk-marble-pop 0.9s cubic-bezier(0.34, 1.6, 0.64, 1);
+  transition: cx 1.5s ease, cy 1.5s ease;
+}
+
+/* A very slow, small sway: alive, not distracting. */
+.dsk-tree-sway {
+  transform-origin: 100px 205px;
+  animation: dsk-sway 9s ease-in-out infinite;
+}
+
+@keyframes dsk-sway {
+  0%,
+  100% {
+    transform: rotate(-1deg);
+  }
+  50% {
+    transform: rotate(1deg);
+  }
+}
+
+@keyframes dsk-grow-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dsk-marble-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+/* ---------- Parked list, shown once every step is done ---------- */
+
+.dsk-done-parked {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6vh;
+  animation: dsk-rise 0.8s ease-out;
+}
+
+.dsk-done-parked ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5vh 2vw;
+  font-size: clamp(12px, 1.3vw, 27px);
+}
+
+.dsk-done-parked li::before {
+  content: "· ";
+  color: var(--dsk-pink);
+}
+
+.dsk-done-parked-none {
+  margin: 0;
+}
+
+/* ---------- Light mode (for light-coloured desks) ----------
+   A projector can't make black, it can only leave light out. So on a light
+   desk, dark text needs a lit panel around it: each panel is filled with soft
+   light and the text is dark. Outside the panels (and the laptop zone) stays
+   unlit, so no light lands on the laptop or paper. */
+
+.dsk-theme-light {
+  --dsk-fill: #f6efec;
+  --dsk-ink: #261f28;
+  --dsk-soft: #6e6370;
+  --dsk-faint: #9d929f;
+  --dsk-accent-grad: linear-gradient(135deg, #d8623a 0%, #c44d86 50%, #7d55c7 100%);
+  --dsk-time-grad: linear-gradient(90deg, #8b8090, #4a4250);
+  --dsk-on: #2f9b5f;
+  --dsk-peach: #d8623a;
+  --dsk-pink: #c44d86;
+  --dsk-lilac: #7d55c7;
+  --tree-trunk: #6d4f45;
+  --tree-leaf-a: #d8623a;
+  --tree-leaf-b: #7d55c7;
+}
+
+.dsk-theme-light .dsk-panel {
+  box-shadow: 0 0 1.2vw rgba(245, 163, 199, 0.18);
+}
+
+.dsk-theme-light .dsk-laptop-zone {
+  border-color: #4a424d;
+}
+
+.dsk-theme-light .dsk-laptop-zone span {
+  color: #6e6370;
+}
+
+.dsk-theme-light .dsk-bar,
+.dsk-theme-light .dsk-timeline {
+  border-color: #b5aab6;
+}
+
+.dsk-theme-light .dsk-timeline {
+  background: #ebe2e0;
+}
+
+.dsk-theme-light .dsk-dot {
+  border-color: #9d929f;
+}
+
+.dsk-theme-light .dsk-dot-current {
+  border-color: var(--dsk-ink);
+}
+
+.dsk-theme-light .dsk-tone-nudge .dsk-kicker {
+  color: #d62839;
 }

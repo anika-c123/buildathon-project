@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage, sendAction } from "./connection.js";
+import { addQuote, nextQuote, useQuote, useQuoteRotation } from "./quotes.js";
+import { useSessionTime } from "./timer.js";
+import { updateDeskSettings, useDeskSettings, useProjectorConnected } from "./deskSettings.js";
 import "./control.css";
 
 // The laptop control screen (http://localhost:5173/).
@@ -16,6 +19,7 @@ const PLAN_TIMEOUT_MS = 15000; // stop the "Thinking…" spinner if no steps com
 
 export default function Control() {
   const { connected, data } = useSessionUpdate();
+  useQuoteRotation(data); // new quote each session and every 30 minutes
 
   // Form fields live here (not inside the Setup view) so nothing you've typed
   // is lost if the backend restarts or you come back from the summary.
@@ -131,22 +135,29 @@ export default function Control() {
       )}
       <header className="ctl-header">
         <span className="ctl-brand">
-          <LockMark />
+          <span className="ctl-orb" aria-hidden="true" />
           <span className="ctl-logo">PLocked</span>
         </span>
-        <span className="ctl-subtitle">
-          <span className={`ctl-conn ${connected ? "is-on" : ""}`} aria-hidden="true" />
-          {connected ? "Connected" : "Offline"}
-        </span>
+        <HeaderStatus backendConnected={connected} />
       </header>
-      <main className="ctl-card">
-        {notice && (
-          <p className="ctl-notice" role="alert">
-            {notice}
-          </p>
-        )}
-        {view}
-      </main>
+      <div className="ctl-layout">
+        <div className="ctl-main-col">
+        <main className="ctl-card">
+          {notice && (
+            <p className="ctl-notice" role="alert">
+              {notice}
+            </p>
+          )}
+          {view}
+        </main>
+        <ProjectorCard />
+        </div>
+        <aside className="ctl-side">
+          {inSession && <SeesCard activity={data.activity} camera={data.camera} />}
+          <QuoteCard />
+          {inSession && <ParkedCard parked={data.parked} connected={connected} send={send} />}
+        </aside>
+      </div>
     </div>
   );
 }
@@ -185,7 +196,7 @@ function SetupView({
     >
       <div className="ctl-section">
         <label className="ctl-headline" htmlFor="goal">
-          What do you want to get done?
+          <strong>{greeting()},</strong> what do you want to get done?
         </label>
         <div className="ctl-row">
           <input
@@ -284,6 +295,7 @@ function StudyingView({ data, connected, send, onEnd }) {
   const onBreak = data.status === "break";
   const allDone = steps.length > 0 && data.current_step === -1;
   const nudge = data.active_nudge;
+  const time = useSessionTime(data); // same time bar as the desk
 
   // Same welcome-back message the desk shows, for 8 seconds.
   const [reentry, setReentry] = useState(null);
@@ -339,7 +351,7 @@ function StudyingView({ data, connected, send, onEnd }) {
         {data.demo_mode && <span className="ctl-tag">demo mode</span>}
       </p>
       <h1 className="ctl-goal-title">{data.goal}</h1>
-      <p className="ctl-muted">
+      <p className="ctl-muted ctl-steps-done">
         {doneCount} of {steps.length} steps done
       </p>
       <div className="ctl-progress" aria-hidden="true">
@@ -348,6 +360,13 @@ function StudyingView({ data, connected, send, onEnd }) {
           style={{ width: steps.length ? `${(doneCount / steps.length) * 100}%` : 0 }}
         />
       </div>
+      {/* Time left as a bar only (no numbers), same as the desk. Pauses on a break. */}
+      <div className="ctl-timebar-row">
+        <span className="ctl-timebar-label">{onBreak ? "Time · paused" : "Time"}</span>
+        <div className={`ctl-timebar ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
+          <div className="ctl-timebar-fill" style={{ width: `${time.fraction * 100}%` }} />
+        </div>
+      </div>
       <ol className="ctl-step-status">
         {steps.map((step, i) => (
           <li key={i} className={step.done ? "is-done" : i === data.current_step ? "is-current" : ""}>
@@ -355,6 +374,27 @@ function StudyingView({ data, connected, send, onEnd }) {
           </li>
         ))}
       </ol>
+
+      {allDone && (
+        <div className="ctl-done">
+          <p className="ctl-done-title">All {steps.length} steps done. Nice work!</p>
+          {(data.parked ?? []).length > 0 ? (
+            <>
+              <p className="ctl-label">Parked for later — pick what's next</p>
+              <ul className="ctl-parked-list">
+                {[...data.parked].reverse().map((item, k) => (
+                  <li key={`${item.timestamp}-${k}`}>
+                    <span>{item.text}</span>
+                    <time className="ctl-parked-time">{clock(item.timestamp)}</time>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="ctl-muted ctl-small">Nothing parked. End the session when you're ready.</p>
+          )}
+        </div>
+      )}
 
       <div className="ctl-actions">
         {onBreak ? (
@@ -370,14 +410,18 @@ function StudyingView({ data, connected, send, onEnd }) {
             </button>
           )
         )}
-        {!onBreak && (
+        {allDone && !onBreak && (
+          <button type="button" className="ctl-cta" disabled={!connected} onClick={onEnd}>
+            <span>End session &amp; see summary</span>
+            <Arrow />
+          </button>
+        )}
+        {!onBreak && !allDone && (
           <button type="button" className="ctl-btn ctl-btn-secondary" disabled={!connected} onClick={() => send("break")}>
             Take a break
           </button>
         )}
       </div>
-
-      <ParkBox connected={connected} send={send} />
 
       <div className="ctl-footer">
         <p className="ctl-muted ctl-small">
@@ -389,6 +433,40 @@ function StudyingView({ data, connected, send, onEnd }) {
       </div>
     </div>
   );
+}
+
+// Parked for later: the park box plus everything parked this session,
+// newest first. (The same list shows small on the desk.)
+function ParkedCard({ parked, connected, send }) {
+  const items = [...(parked ?? [])].reverse();
+  return (
+    <section className="ctl-card ctl-parked-card" aria-label="Parked for later">
+      <p className="ctl-label">
+        Parked for later{items.length ? ` · ${items.length}` : ""}
+      </p>
+      <ParkBox connected={connected} send={send} />
+      {items.length === 0 ? (
+        <p className="ctl-muted ctl-small ctl-parked-empty">
+          Stray thought? Park it here and get back to work. It'll wait for you.
+        </p>
+      ) : (
+        <ul className="ctl-parked-list">
+          {items.map((item, k) => (
+            <li key={`${item.timestamp}-${k}`}>
+              <span>{item.text}</span>
+              <time className="ctl-parked-time">{clock(item.timestamp)}</time>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// "4:12 PM" from a timestamp, for the parked list.
+function clock(timestamp) {
+  if (!timestamp) return "";
+  return new Date(timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 // One-line "park a thought": type it, press Enter, it shows on the desk.
@@ -482,13 +560,211 @@ function Arrow({ small = false }) {
   );
 }
 
-// A small rounded padlock: PLocked's own mark.
-function LockMark() {
+// "Good morning" / "Good afternoon" / "Good evening", from the laptop's clock.
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+// ---------- Quote on the desk ----------
+// Shows the quote currently projected on the desk. "New quote" picks another at
+// random; "Add your own" saves yours and shows it on the desk straight away.
+
+function QuoteCard() {
+  const quote = useQuote();
+  const [adding, setAdding] = useState(false);
+  const [text, setText] = useState("");
+  const [author, setAuthor] = useState("");
+
+  function save(e) {
+    e.preventDefault();
+    if (addQuote(text, author)) {
+      setText("");
+      setAuthor("");
+      setAdding(false);
+    }
+  }
+
   return (
-    <svg className="ctl-mark" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7.5 10V7.5a4.5 4.5 0 0 1 9 0V10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-      <rect x="4" y="10" width="16" height="11.5" rx="4" fill="currentColor" />
-      <circle cx="12" cy="15.6" r="1.7" fill="#fbfcf5" />
-    </svg>
+    <section className="ctl-card ctl-quote-card" aria-label="Quote on the desk">
+      <p className="ctl-label">Quote on the desk</p>
+      <blockquote className="ctl-quote" key={quote.text}>
+        <p>“{quote.text}”</p>
+        {quote.author && <footer>— {quote.author}</footer>}
+      </blockquote>
+
+      {adding ? (
+        <form className="ctl-quote-form" onSubmit={save}>
+          <textarea
+            className="ctl-input ctl-textarea"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Type a quote that keeps you going…"
+            aria-label="Your quote"
+            rows={3}
+            maxLength={160}
+            autoFocus
+          />
+          <input
+            className="ctl-input"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            placeholder="Who said it? (optional)"
+            aria-label="Who said it"
+          />
+          <div className="ctl-quote-buttons">
+            <button type="submit" className="ctl-btn ctl-btn-primary" disabled={!text.trim()}>
+              Save &amp; show
+            </button>
+            <button type="button" className="ctl-btn ctl-btn-quiet" onClick={() => setAdding(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="ctl-quote-buttons">
+          <button type="button" className="ctl-btn ctl-btn-secondary" onClick={() => nextQuote()}>
+            ↻ New quote
+          </button>
+          <button type="button" className="ctl-btn ctl-btn-quiet" onClick={() => setAdding(true)}>
+            + Add your own
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---------- Header: backend + projector status ----------
+// Backend: the live connection to the backend (connection.js).
+// Projector: the desk page (localhost:5173/desk) is open in this browser;
+// it checks in every 2 seconds (deskSettings.js).
+
+function HeaderStatus({ backendConnected }) {
+  const projector = useProjectorConnected();
+  return (
+    <div className="ctl-status-bar">
+      <span className={`ctl-pill ${backendConnected ? "is-on" : ""}`}>
+        <span className="ctl-conn" aria-hidden="true" />
+        {backendConnected ? "Backend connected" : "Backend offline"}
+      </span>
+      <span className={`ctl-pill ${projector ? "is-on" : ""}`}>
+        <span className="ctl-conn" aria-hidden="true" />
+        {projector ? "Projector connected" : "Projector not open"}
+      </span>
+      <button
+        type="button"
+        className="ctl-pill ctl-pill-btn"
+        onClick={() => {
+          const card = document.getElementById("projector-display");
+          card?.scrollIntoView({ behavior: "smooth", block: "center" });
+          card?.classList.remove("is-flash");
+          void card?.offsetWidth; // restart the highlight animation
+          card?.classList.add("is-flash");
+        }}
+      >
+        Display settings
+      </button>
+    </div>
+  );
+}
+
+// ---------- Projector display settings ----------
+// Big, clear choice of desk colours, plus what appears on the desk.
+// Changes show on the projector straight away.
+
+const THEMES = [
+  { id: "dark", name: "Dark desk", hint: "Glowing lines, light text" },
+  { id: "light", name: "Light desk", hint: "Lit panels, dark text" },
+];
+
+const SHOW = [
+  { key: "showTimer", label: "Timer" },
+  { key: "showTree", label: "Tree" },
+  { key: "showQuote", label: "Quote" },
+];
+
+function ProjectorCard() {
+  const settings = useDeskSettings();
+  const projector = useProjectorConnected();
+  return (
+    <section id="projector-display" className="ctl-card ctl-projector" aria-label="Projector display">
+      <div className="ctl-projector-head">
+        <p className="ctl-projector-title">Projector display</p>
+        <span className={`ctl-pill ${projector ? "is-on" : ""}`}>
+          <span className="ctl-conn" aria-hidden="true" />
+          {projector ? "Connected" : "Not open"}
+        </span>
+      </div>
+      <p className="ctl-muted ctl-small ctl-projector-sub">
+        {projector ? "Changes show on the desk right away." : "Open localhost:5173/desk on the projector screen."}
+      </p>
+
+      <p className="ctl-label">Desk colour</p>
+      <div className="ctl-theme-choices" role="radiogroup" aria-label="Desk colour">
+        {THEMES.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="radio"
+            aria-checked={settings.theme === t.id}
+            className={`ctl-theme-choice ${settings.theme === t.id ? "is-on" : ""}`}
+            onClick={() => updateDeskSettings({ theme: t.id })}
+          >
+            <span className={`ctl-theme-swatch ctl-swatch-${t.id}`} aria-hidden="true">
+              <span className="ctl-swatch-panel">
+                <span className="ctl-swatch-line" />
+                <span className="ctl-swatch-line is-short" />
+              </span>
+            </span>
+            <span className="ctl-theme-name">{t.name}</span>
+            <span className="ctl-theme-hint">{t.hint}</span>
+          </button>
+        ))}
+      </div>
+
+      <p className="ctl-label">Show on desk</p>
+      <div className="ctl-show-row">
+        {SHOW.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={settings[key]}
+            className={`ctl-chip ${settings[key] ? "is-on" : ""}`}
+            onClick={() => updateDeskSettings({ [key]: !settings[key] })}
+          >
+            <span className="ctl-chip-box" aria-hidden="true">{settings[key] ? "✓" : ""}</span>
+            {label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ---------- What PLocked sees (moved here from the desk) ----------
+
+const ACTIVITY_WORDS = { relevant: "on task", unrelated: "off task", uncertain: "not sure", unknown: "—" };
+const CAMERA_WORDS = { present: "at desk", away: "away", phone_in_hand: "phone in hand", unknown: "off" };
+
+function SeesCard({ activity, camera }) {
+  const label = activity?.label ?? "unknown";
+  const cam = camera?.state ?? "unknown";
+  return (
+    <section className="ctl-card ctl-sees" aria-label="What PLocked sees">
+      <p className="ctl-label">PLocked sees</p>
+      <div className="ctl-sees-row">
+        <span className={`ctl-led ctl-led-${label}`} aria-hidden="true" />
+        <span className="ctl-sees-name">{activity?.domain ?? "no site yet"}</span>
+        <span className="ctl-sees-word">{ACTIVITY_WORDS[label] ?? label}</span>
+      </div>
+      <div className="ctl-sees-row">
+        <span className={`ctl-led ctl-led-cam-${cam}`} aria-hidden="true" />
+        <span className="ctl-sees-name">Camera</span>
+        <span className="ctl-sees-word">{CAMERA_WORDS[cam] ?? cam}</span>
+      </div>
+    </section>
   );
 }
