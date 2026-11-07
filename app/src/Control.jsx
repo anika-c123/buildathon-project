@@ -295,7 +295,7 @@ function StudyingView({ data, connected, send, onEnd }) {
   const onBreak = data.status === "break";
   const allDone = steps.length > 0 && data.current_step === -1;
   const nudge = data.active_nudge;
-  const time = useSessionTime(data); // same "40 min left" as the desk
+  const time = useSessionTime(data); // same time bar as the desk
 
   // Same welcome-back message the desk shows, for 8 seconds.
   const [reentry, setReentry] = useState(null);
@@ -331,6 +331,14 @@ function StudyingView({ data, connected, send, onEnd }) {
             <button type="button" className="ctl-btn ctl-btn-quiet" disabled={!connected} onClick={() => send("break")}>
               Break
             </button>
+            <button
+              type="button"
+              className="ctl-btn ctl-btn-quiet"
+              disabled={!connected}
+              onClick={() => send("relevant", { nudge_id: nudge.id })}
+            >
+              This is relevant
+            </button>
           </div>
         </div>
       )}
@@ -343,20 +351,21 @@ function StudyingView({ data, connected, send, onEnd }) {
         {data.demo_mode && <span className="ctl-tag">demo mode</span>}
       </p>
       <h1 className="ctl-goal-title">{data.goal}</h1>
-      <div className="ctl-meta">
-        <span className="ctl-muted">
-          {doneCount} of {steps.length} steps done
-        </span>
-        <span className="ctl-time-left">
-          {time.label}
-          {onBreak ? " · paused" : ""}
-        </span>
-      </div>
+      <p className="ctl-muted ctl-steps-done">
+        {doneCount} of {steps.length} steps done
+      </p>
       <div className="ctl-progress" aria-hidden="true">
         <div
           className="ctl-progress-fill"
           style={{ width: steps.length ? `${(doneCount / steps.length) * 100}%` : 0 }}
         />
+      </div>
+      {/* Time left as a bar only (no numbers), same as the desk. Pauses on a break. */}
+      <div className="ctl-timebar-row">
+        <span className="ctl-timebar-label">{onBreak ? "Time · paused" : "Time"}</span>
+        <div className={`ctl-timebar ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
+          <div className="ctl-timebar-fill" style={{ width: `${time.fraction * 100}%` }} />
+        </div>
       </div>
       <ol className="ctl-step-status">
         {steps.map((step, i) => (

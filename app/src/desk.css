@@ -262,29 +262,8 @@
   transition: width 0.9s cubic-bezier(0.34, 1.4, 0.64, 1); /* a little bounce when a step is done */
 }
 
-.dsk-clock {
+.dsk-time-label {
   margin-top: auto;
-  display: flex;
-  align-items: baseline;
-  gap: 0.8vw;
-}
-
-.dsk-time-left {
-  margin: 0;
-  font-size: clamp(16px, 2vw, 42px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  animation: dsk-rise 0.6s ease-out;
-}
-
-
-.dsk-paused {
-  font-size: clamp(10px, 0.95vw, 20px);
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--dsk-lilac);
 }
 
 .dsk-timeline {

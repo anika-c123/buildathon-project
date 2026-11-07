@@ -816,20 +816,6 @@ code {
   }
 }
 
-/* Progress line: "2 of 4 steps done" on the left, "40 min left" on the right. */
-.ctl-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.ctl-time-left {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-
 /* ---------- Parked card (under the quote) ---------- */
 
 .ctl-parked-card {
@@ -1193,4 +1179,45 @@ code {
   flex-direction: column;
   gap: 20px;
   min-width: 0;
+}
+
+/* "2 of 4 steps done" above the progress bar, then the time bar. */
+.ctl-steps-done {
+  margin: 0;
+}
+
+.ctl-timebar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ctl-timebar-label {
+  flex: none;
+  min-width: 92px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ctl-muted);
+}
+
+.ctl-timebar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ctl-inset);
+  border: 1px solid var(--ctl-edge);
+  overflow: hidden;
+}
+
+.ctl-timebar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #b9b0c2;
+  transition: width 1s linear;
+}
+
+.ctl-timebar.is-paused .ctl-timebar-fill {
+  background: var(--ctl-lilac);
 }

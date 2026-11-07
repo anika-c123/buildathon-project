@@ -160,7 +160,7 @@ function NowPanel({ data, steps, onBreak, breakLeft, breakOver, reentry, celebra
         <h1 className="dsk-big dsk-nudge-text" key={nudge.id}>
           {nudge.message}
         </h1>
-        <p className="dsk-hint">Answer on your laptop · Back to work or Break</p>
+        <p className="dsk-hint">Answer on your laptop · Back to work, Break, or This is relevant</p>
       </Panel>
     );
   }
@@ -241,8 +241,7 @@ function Celebration() {
 
 // ---------- Progress + time ----------
 // Thick bar: steps done, matching the laptop's progress bar.
-// "40 min left": time left in calm steps (60 → 50 → 40 …, see timer.js), not every minute.
-// Bar under it: the detailed view of time left, sliding down smoothly. Pauses on a break.
+// Time bar under it: time left, sliding down smoothly, no numbers. Pauses on a break.
 
 function ProgressPanel({ steps, time, onBreak, showTimer }) {
   const done = steps.filter((s) => s.done).length;
@@ -257,10 +256,7 @@ function ProgressPanel({ steps, time, onBreak, showTimer }) {
       </div>
       {showTimer && (
         <>
-          <div className="dsk-clock">
-            <p className="dsk-time-left">{time.label}</p>
-            {onBreak && <span className="dsk-paused">paused</span>}
-          </div>
+          <p className="dsk-label dsk-time-label">{onBreak ? "Time · paused" : "Time"}</p>
           <div className={`dsk-timeline ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
             <div className="dsk-timeline-fill" style={{ width: `${time.fraction * 100}%` }} />
           </div>
