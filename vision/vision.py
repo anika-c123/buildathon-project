@@ -240,116 +240,45 @@ def run_camera(args):
     except ImportError as exc:
         raise SystemExit("Install dependencies: python -m pip install -r requirements.txt") from exc
 
-    # E13: first check backend without opening the camera or loading models.
-    study = get_study_status(args.backend)
-    print("E13 privacy mode: polling GET /state every 2 seconds."
-          " Camera opens only after confirmed studying status.")
-    objects = None
-    landmarker = None
-    capture = None
-    last_poll = time.monotonic()
-    last_status = study
-    studying = False
-    fallback = args.discard_on_idle
-    failure_reopens = 0
+    print("Loading pretrained AI models (first run can download weights)...")
+    objects = YOLO("yolo11n.pt")
+    model_file = Path(__file__).with_name("hand_landmarker.task")
+    if not model_file.exists():
+        print("Downloading MediaPipe hand model (once)...")
+        urlretrieve(MODEL_URL, model_file)
+
+    options = mp.tasks.vision.HandLandmarkerOptions(
+        base_options=mp.tasks.BaseOptions(model_asset_path=str(model_file)),
+        running_mode=mp.tasks.vision.RunningMode.VIDEO,
+        num_hands=2,
+        min_hand_detection_confidence=0.35,
+        min_hand_presence_confidence=0.35,
+        min_tracking_confidence=0.4,
+    )
+    landmarker = mp.tasks.vision.HandLandmarker.create_from_options(options)
+    capture = cv2.VideoCapture(args.camera, cv2.CAP_AVFOUNDATION)
+    if not capture.isOpened():
+        landmarker.close()
+        raise SystemExit(f"Cannot open camera {args.camera}; try another index or --demo")
+
+    stable = StableState(args.hold_seconds)
+    last_timestamp = -1
+    start_time = time.monotonic()
+    last_sent = 0.0
+    last_reported_state = None
+    latest = ("unknown", False, False)
+    last_boxes = []
+    last_points = []
+    presence_tracker = PresenceTracker(args.absence_grace)
+    held_tracker = PhoneHeldTracker(motion_fraction=args.pickup_motion,
+                                   motion_window=args.motion_window,
+                                   release_grace=args.release_grace)
     frame_counter = 0
     failed_frames = 0
-    preview_open = False
-    successful_frames = 0
-
-    def close_preview():
-        nonlocal preview_open
-        if preview_open:
-            cv2.destroyAllWindows()
-            preview_open = False
-
-    def close_camera():
-        nonlocal capture
-        if capture is not None:
-            capture.release()
-            capture = None
-        close_preview()
+    print("Camera running. Press Q in preview or Ctrl+C in terminal to quit.")
 
     try:
         while True:
-            now = time.monotonic()
-            if now - last_poll >= args.state_poll:
-                last_status = get_study_status(args.backend)
-                last_poll = now
-
-            should_study = last_status is True
-            if not should_study:
-                if studying:
-                    print("Study session paused/ended or backend unavailable: stopping inference and events.")
-                    studying = False
-                    close_preview()
-                    # privacy baseline: release camera, even on backend failure.
-                    if not fallback:
-                        close_camera()
-                if fallback and capture is not None:
-                    # Explicit fallback: still physically open, but never processed/saved/sent.
-                    ok, frame = capture.read()
-                    del frame
-                    if not ok:
-                        close_camera()
-                        # Do not reopen while idle; try again next study session.
-                    time.sleep(0.02)
-                else:
-                    time.sleep(0.1)
-                continue
-
-            if not studying:
-                if objects is None:
-                    print("Loading models after study session began...")
-                    objects = YOLO("yolo11n.pt")
-                    model_file = Path(__file__).with_name("hand_landmarker.task")
-                    if not model_file.exists():
-                        print("Downloading MediaPipe hand model (once)...")
-                        urlretrieve(MODEL_URL, model_file)
-                    options = mp.tasks.vision.HandLandmarkerOptions(
-                        base_options=mp.tasks.BaseOptions(model_asset_path=str(model_file)),
-                        running_mode=mp.tasks.vision.RunningMode.VIDEO,
-                        num_hands=2,
-                        min_hand_detection_confidence=0.35,
-                        min_hand_presence_confidence=0.35,
-                        min_tracking_confidence=0.4,
-                    )
-                    landmarker = mp.tasks.vision.HandLandmarker.create_from_options(options)
-                if capture is None:
-                    capture = open_camera(cv2, args.camera)
-                    if capture is None:
-                        failure_reopens += 1
-                        print(f"Cannot reopen camera {args.camera}; retry next poll.")
-                        if failure_reopens >= args.reopen_failures and not fallback:
-                            fallback = True
-                            print("WARNING: switching to discard-on-idle fallback."
-                                  " Camera will remain physically OPEN outside studying"
-                                  " if a later reopen succeeds. No idle inference/events.")
-                        # Never open outside studying, even if reopen fails.
-                        time.sleep(args.state_poll)
-                        continue
-                # An open device is not necessarily a stable camera stream.
-                studying = True
-                stable, presence_tracker, held_tracker = reset_trackers(args)
-                start_time = time.monotonic()
-                last_timestamp = -1
-                last_sent = 0.0
-                last_reported_state = None
-                latest = ("unknown", False, False)
-                last_boxes, last_points = [], []
-                frame_counter = 0
-                failed_frames = 0
-                successful_frames = 0
-                # Model loading may have overlapped with session ending.
-                last_status = get_study_status(args.backend)
-                last_poll = time.monotonic()
-                if last_status is not True:
-                    studying = False
-                    if not fallback:
-                        close_camera()
-                    continue
-                print("STUDYING: camera active. Q to quit; Ctrl+C to stop.")
-
             ok, frame = capture.read()
             if not ok or frame is None:
                 failed_frames += 1
@@ -399,7 +328,7 @@ def run_camera(args):
                 # E2: recently observed person/hands means present; short
                 # detector dropouts do not automatically imply away.
                 presence = presence_tracker.observe(
-                    people or bool(hands), now, args.empty_means_away
+                    people or bool(hands), now, empty_means_away
                 )
 
                 # E4: phone must move while at least two relevant hand
@@ -486,8 +415,10 @@ def main():
                         help="Seconds of missing hand contact before releasing held state")
     parser.add_argument("--absence-grace", type=float, default=2.0,
                         help="Seconds with no person/hands before raw away can begin")
-    parser.add_argument("--empty-means-away", action="store_true",
-                        help="Treat empty frame as away; only for calibrated full-desk view")
+    parser.add_argument("--no-away-detection", action="store_true",
+                        help="Don't report 'away' for an empty frame (E2 is on by default; use this "
+                             "for an uncalibrated/partial desk view where hands often leave frame "
+                             "while the student is still there)")
     parser.add_argument("--verbose-backend", action="store_true")
     parser.add_argument("--no-window", action="store_true")
     parser.add_argument("--draw", action="store_true")
