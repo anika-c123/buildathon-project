@@ -38,16 +38,13 @@ WORDINGS = {
     "unrelated_tab": [
         "Ready to get back to {goal}?",
         "Still with {goal}? Your next step is right there whenever you are.",
-        "No rush — {goal} will be waiting when you're ready.",
         "Just a friendly nudge: {goal} is still the plan for today.",
         "Checking in — back to {goal} when it feels right?",
     ],
     "phone": [
-        "Phone break? Totally fine — just a nudge that {goal} is still waiting.",
         "No judgment here, just a gentle reminder about {goal}.",
         "Whenever you're ready, {goal} will be right here.",
         "Just a friendly ping — back to it whenever you are.",
-        "Scrolling happens — {goal} isn't going anywhere.",
     ],
     "long_stretch": [
         "You've been at it a while — a short break might feel good.",
