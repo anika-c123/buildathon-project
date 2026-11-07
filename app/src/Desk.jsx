@@ -3,18 +3,18 @@ import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage } from "./connection.js";
 import { useQuote, useQuoteRotation } from "./quotes.js";
 import { useSessionTime } from "./timer.js";
-import { useDeskTheme } from "./deskTheme.js";
+import { useDeskHeartbeat, useDeskSettings } from "./deskSettings.js";
 import FocusTree from "./FocusTree.jsx";
 import "./desk.css";
 
 // The desk view (http://localhost:5173/desk), projected onto the desk.
 //
 // DISPLAY ONLY: a projection can't be clicked, so there are no buttons here.
-// Every button (step done, break, park, nudge answers, new quote) lives on the
-// laptop's control screen. This page just draws the latest session_update as
-// glowing outlines with see-through (black) insides: black projects no light,
-// so on a dark desk only the outlines and text show. Panels sit around a
-// dashed zone where the laptop goes.
+// Every button (step done, break, park, nudge answers, quotes, display
+// settings) lives on the laptop's control screen. This page just draws the
+// latest session_update: panels along the top (current step, progress + time,
+// quote + focus tree) and an open, unlit "laptop space" across the bottom for
+// the laptop and paper. Black projects no light, so only lines and text show.
 
 const REENTRY_SHOW_MS = 8000; // contract §5: show a welcome-back for about 8 seconds
 const CELEBRATE_MS = 1600;
@@ -32,6 +32,8 @@ function useBreakLength(data) {
 
 export default function Desk() {
   const { connected, data } = useSessionUpdate();
+  const settings = useDeskSettings(); // dark/light + what to show, set on the laptop
+  useDeskHeartbeat(); // lets the laptop show "Projector connected"
   const time = useSessionTime(data);
   useQuoteRotation(data); // new quote each session and every 30 minutes
   const now = time.now;
@@ -104,7 +106,7 @@ export default function Desk() {
 
   return (
     <Screen>
-      <div className="dsk-grid">
+      <div className={`dsk-grid ${settings.showQuote || settings.showTree ? "" : "no-side"}`}>
         <NowPanel
           data={data}
           steps={steps}
@@ -114,16 +116,17 @@ export default function Desk() {
           reentry={reentry}
           celebration={celebration}
         />
-        <ProgressPanel steps={steps} time={time} onBreak={onBreak} />
-        <QuotePanel />
-        <Panel className="dsk-treebox">
-          <p className="dsk-label">Focus tree</p>
-          <FocusTree focusedMs={time.focusedMs} stepsDone={doneCount} stepsTotal={steps.length} />
-        </Panel>
+        <ProgressPanel steps={steps} time={time} onBreak={onBreak} showTimer={settings.showTimer} />
+        {(settings.showQuote || settings.showTree) && (
+          <QuoteTreePanel
+            showQuote={settings.showQuote}
+            showTree={settings.showTree}
+            tree={<FocusTree focusedMs={time.focusedMs} stepsDone={doneCount} stepsTotal={steps.length} />}
+          />
+        )}
         <div className="dsk-laptop-zone" aria-hidden="true">
-          <span>laptop</span>
+          <span>Laptop space · no projection</span>
         </div>
-        <StatusPanel activity={data.activity} camera={data.camera} />
       </div>
     </Screen>
   );
@@ -133,9 +136,9 @@ function clamp01(x) {
   return Math.min(1, Math.max(0, x));
 }
 
-// The theme (dark or light desk) is picked on the laptop; see deskTheme.js.
+// The theme (dark or light desk) is picked on the laptop; see deskSettings.js.
 function Screen({ children }) {
-  const theme = useDeskTheme();
+  const { theme } = useDeskSettings();
   return <div className={`dsk-screen dsk-theme-${theme}`}>{children}</div>;
 }
 
@@ -241,7 +244,7 @@ function Celebration() {
 // "40 min left": time left in calm steps (60 → 50 → 40 …, see timer.js), not every minute.
 // Bar under it: the detailed view of time left, sliding down smoothly. Pauses on a break.
 
-function ProgressPanel({ steps, time, onBreak }) {
+function ProgressPanel({ steps, time, onBreak, showTimer }) {
   const done = steps.filter((s) => s.done).length;
   const fraction = steps.length ? done / steps.length : 0;
   return (
@@ -252,28 +255,46 @@ function ProgressPanel({ steps, time, onBreak }) {
       <div className="dsk-bar" aria-hidden="true">
         <div className="dsk-bar-fill" style={{ width: `${fraction * 100}%` }} />
       </div>
-      <div className="dsk-clock">
-        <p className="dsk-time-left">{time.label}</p>
-        {onBreak && <span className="dsk-paused">paused</span>}
-      </div>
-      <div className={`dsk-timeline ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
-        <div className="dsk-timeline-fill" style={{ width: `${time.fraction * 100}%` }} />
-      </div>
+      {showTimer && (
+        <>
+          <div className="dsk-clock">
+            <p className="dsk-time-left">{time.label}</p>
+            {onBreak && <span className="dsk-paused">paused</span>}
+          </div>
+          <div className={`dsk-timeline ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
+            <div className="dsk-timeline-fill" style={{ width: `${time.fraction * 100}%` }} />
+          </div>
+        </>
+      )}
     </Panel>
   );
 }
 
-// ---------- Quote (changed from the laptop) ----------
+// ---------- Quote + focus tree (changed from the laptop) ----------
 
-function QuotePanel() {
+// Quote on the left, focus tree on the right, in one panel. Either can be
+// switched off from the laptop's "Projector display" card.
+function QuoteTreePanel({ showQuote, showTree, tree }) {
   const quote = useQuote();
   return (
     <Panel className="dsk-quote">
-      <p className="dsk-label">A little push</p>
-      <p className="dsk-quote-text" key={quote.text}>
-        “{quote.text}”
-      </p>
-      {quote.author && <p className="dsk-quote-author">— {quote.author}</p>}
+      <div className="dsk-quote-row">
+        {showQuote && (
+          <div className="dsk-quote-col">
+            <p className="dsk-label">A little push</p>
+            <p className="dsk-quote-text" key={quote.text}>
+              “{quote.text}”
+            </p>
+            {quote.author && <p className="dsk-quote-author">— {quote.author}</p>}
+          </div>
+        )}
+        {showTree && (
+          <div className="dsk-tree-col">
+            {!showQuote && <p className="dsk-label">Focus tree</p>}
+            {tree}
+          </div>
+        )}
+      </div>
     </Panel>
   );
 }
@@ -294,41 +315,5 @@ function DoneParked({ items }) {
         ))}
       </ul>
     </div>
-  );
-}
-
-// ---------- Status: what PLocked currently sees ----------
-
-const ACTIVITY_WORDS = {
-  relevant: "on task",
-  unrelated: "off task",
-  uncertain: "not sure",
-  unknown: "—",
-};
-
-const CAMERA_WORDS = {
-  present: "at desk",
-  away: "away",
-  phone_in_hand: "phone in hand",
-  unknown: "off",
-};
-
-function StatusPanel({ activity, camera }) {
-  const label = activity?.label ?? "unknown";
-  const cam = camera?.state ?? "unknown";
-  return (
-    <Panel className="dsk-status">
-      <p className="dsk-label">PLocked sees</p>
-      <div className="dsk-status-row">
-        <span className={`dsk-led dsk-led-${label}`} aria-hidden="true" />
-        <span className="dsk-status-name">{activity?.domain ?? "no site yet"}</span>
-        <span className="dsk-status-word">{ACTIVITY_WORDS[label] ?? label}</span>
-      </div>
-      <div className="dsk-status-row">
-        <span className={`dsk-led dsk-led-cam-${cam}`} aria-hidden="true" />
-        <span className="dsk-status-name">camera</span>
-        <span className="dsk-status-word">{CAMERA_WORDS[cam] ?? cam}</span>
-      </div>
-    </Panel>
   );
 }

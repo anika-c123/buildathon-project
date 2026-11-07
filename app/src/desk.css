@@ -31,22 +31,30 @@
   cursor: none; /* hide the mouse pointer on the projection */
 }
 
-/* ---------- Layout ---------- */
-/*  [ Now (step)       ][ Progress ][ Quote ]
-    [ Parked ][     laptop zone     ][ Status]
-    The bottom row is taller and the middle columns wider, so the laptop
-    zone has room for the laptop AND paper/notebook. */
+/* ---------- Layout ----------
+    [ Now (step)       ][ Progress ][ Quote + tree ]
+    [          Laptop space · no projection          ]
+   Panels only along the top; the whole bottom is left unlit for the
+   laptop and paper. */
 
 .dsk-grid {
   position: absolute;
   inset: 3.5vh 2.6vw;
   display: grid;
-  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr) minmax(0, 1.18fr) minmax(0, 0.82fr);
-  grid-template-rows: minmax(0, 0.78fr) minmax(0, 1.42fr);
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 0.92fr);
   grid-template-areas:
-    "now now time quote"
-    "parked laptop laptop status";
-  gap: 1.6vw;
+    "now time quote"
+    "laptop laptop laptop";
+  gap: 2.4vh 1.6vw;
+}
+
+/* Quote and tree both switched off: the step panel takes the space. */
+.dsk-grid.no-side {
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr);
+  grid-template-areas:
+    "now time"
+    "laptop laptop";
 }
 
 .dsk-now {
@@ -57,12 +65,6 @@
 }
 .dsk-quote {
   grid-area: quote;
-}
-.dsk-treebox {
-  grid-area: parked;
-}
-.dsk-status {
-  grid-area: status;
 }
 
 /* ---------- Glass outline panel ----------
@@ -127,21 +129,21 @@
     inset 0 0 1.4vw rgba(200, 180, 245, 0.1);
 }
 
-/* The spot where the laptop sits: just a dashed outline, nothing projected inside. */
+/* Where the laptop and paper go: a thin outline, nothing projected inside. */
 .dsk-laptop-zone {
   grid-area: laptop;
-  border: clamp(2px, 0.16vw, 3px) dashed var(--dsk-faint);
-  border-radius: 2.4vw;
+  justify-self: center;
+  width: 82%;
+  border: clamp(1px, 0.12vw, 2px) solid var(--dsk-faint);
+  border-radius: 2vw;
   display: grid;
-  place-items: end center;
-  padding-bottom: 2vh;
+  place-items: center;
 }
 
 .dsk-laptop-zone span {
-  font-size: clamp(10px, 0.95vw, 19px);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--dsk-faint);
+  font-size: clamp(11px, 1.1vw, 22px);
+  letter-spacing: 0.04em;
+  color: var(--dsk-soft);
 }
 
 /* ---------- Type ---------- */
@@ -422,7 +424,31 @@
   }
 }
 
-/* ---------- Quote ---------- */
+/* ---------- Quote + focus tree ---------- */
+
+.dsk-quote-row {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 1.2vw;
+}
+
+.dsk-quote-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4vh;
+}
+
+.dsk-tree-col {
+  flex: 1.15 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+}
+
 
 .dsk-quote-text {
   margin: 0;
@@ -440,54 +466,6 @@
   margin: auto 0 0;
   font-size: clamp(10px, 1vw, 21px);
   color: var(--dsk-soft);
-}
-
-/* ---------- Status ---------- */
-
-.dsk-status-row {
-  display: flex;
-  align-items: center;
-  gap: 0.8vw;
-  font-size: clamp(12px, 1.2vw, 25px);
-  min-width: 0;
-}
-
-.dsk-status-name {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dsk-status-word {
-  color: var(--dsk-soft);
-  white-space: nowrap;
-}
-
-.dsk-led {
-  width: clamp(8px, 0.8vw, 16px);
-  height: clamp(8px, 0.8vw, 16px);
-  flex: none;
-  border-radius: 50%;
-  background: var(--dsk-faint);
-}
-
-.dsk-led-relevant,
-.dsk-led-cam-present {
-  background: var(--dsk-on);
-  box-shadow: 0 0 0.7vw rgba(185, 230, 201, 0.6);
-}
-
-.dsk-led-unrelated,
-.dsk-led-cam-phone_in_hand {
-  background: var(--dsk-peach);
-  box-shadow: 0 0 0.7vw rgba(255, 176, 140, 0.6);
-}
-
-.dsk-led-uncertain,
-.dsk-led-cam-away {
-  background: var(--dsk-lilac);
 }
 
 /* ---------- Idle / connecting ---------- */
@@ -552,10 +530,6 @@
 }
 
 /* ---------- Focus tree ---------- */
-
-.dsk-treebox {
-  align-items: stretch;
-}
 
 .dsk-tree {
   flex: 1;

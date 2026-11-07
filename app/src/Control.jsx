@@ -3,7 +3,7 @@ import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage, sendAction } from "./connection.js";
 import { addQuote, nextQuote, useQuote, useQuoteRotation } from "./quotes.js";
 import { useSessionTime } from "./timer.js";
-import { setDeskTheme, useDeskTheme } from "./deskTheme.js";
+import { updateDeskSettings, useDeskSettings, useProjectorConnected } from "./deskSettings.js";
 import "./control.css";
 
 // The laptop control screen (http://localhost:5173/).
@@ -138,13 +138,10 @@ export default function Control() {
           <span className="ctl-orb" aria-hidden="true" />
           <span className="ctl-logo">PLocked</span>
         </span>
-        <DeskThemeSwitch />
-        <span className="ctl-subtitle">
-          <span className={`ctl-conn ${connected ? "is-on" : ""}`} aria-hidden="true" />
-          {connected ? "Connected" : "Offline"}
-        </span>
+        <HeaderStatus backendConnected={connected} />
       </header>
       <div className="ctl-layout">
+        <div className="ctl-main-col">
         <main className="ctl-card">
           {notice && (
             <p className="ctl-notice" role="alert">
@@ -153,7 +150,10 @@ export default function Control() {
           )}
           {view}
         </main>
+        <ProjectorCard />
+        </div>
         <aside className="ctl-side">
+          {inSession && <SeesCard activity={data.activity} camera={data.camera} />}
           <QuoteCard />
           {inSession && <ParkedCard parked={data.parked} connected={connected} send={send} />}
         </aside>
@@ -636,26 +636,134 @@ function QuoteCard() {
   );
 }
 
-// ---------- Desk: Dark / Light ----------
-// Dark = glowing outlines and light text (dark desks).
-// Light = lit panels with dark text (light desks). The desk tab follows instantly.
+// ---------- Header: backend + projector status ----------
+// Backend: the live connection to the backend (connection.js).
+// Projector: the desk page (localhost:5173/desk) is open in this browser;
+// it checks in every 2 seconds (deskSettings.js).
 
-function DeskThemeSwitch() {
-  const theme = useDeskTheme();
+function HeaderStatus({ backendConnected }) {
+  const projector = useProjectorConnected();
   return (
-    <div className="ctl-seg" role="group" aria-label="Desk projection colours">
-      <span className="ctl-seg-label">Desk</span>
-      {["dark", "light"].map((t) => (
-        <button
-          key={t}
-          type="button"
-          className={`ctl-seg-btn ${theme === t ? "is-on" : ""}`}
-          aria-pressed={theme === t}
-          onClick={() => setDeskTheme(t)}
-        >
-          {t === "dark" ? "Dark" : "Light"}
-        </button>
-      ))}
+    <div className="ctl-status-bar">
+      <span className={`ctl-pill ${backendConnected ? "is-on" : ""}`}>
+        <span className="ctl-conn" aria-hidden="true" />
+        {backendConnected ? "Backend connected" : "Backend offline"}
+      </span>
+      <span className={`ctl-pill ${projector ? "is-on" : ""}`}>
+        <span className="ctl-conn" aria-hidden="true" />
+        {projector ? "Projector connected" : "Projector not open"}
+      </span>
+      <button
+        type="button"
+        className="ctl-pill ctl-pill-btn"
+        onClick={() => {
+          const card = document.getElementById("projector-display");
+          card?.scrollIntoView({ behavior: "smooth", block: "center" });
+          card?.classList.remove("is-flash");
+          void card?.offsetWidth; // restart the highlight animation
+          card?.classList.add("is-flash");
+        }}
+      >
+        Display settings
+      </button>
     </div>
+  );
+}
+
+// ---------- Projector display settings ----------
+// Big, clear choice of desk colours, plus what appears on the desk.
+// Changes show on the projector straight away.
+
+const THEMES = [
+  { id: "dark", name: "Dark desk", hint: "Glowing lines, light text" },
+  { id: "light", name: "Light desk", hint: "Lit panels, dark text" },
+];
+
+const SHOW = [
+  { key: "showTimer", label: "Timer" },
+  { key: "showTree", label: "Tree" },
+  { key: "showQuote", label: "Quote" },
+];
+
+function ProjectorCard() {
+  const settings = useDeskSettings();
+  const projector = useProjectorConnected();
+  return (
+    <section id="projector-display" className="ctl-card ctl-projector" aria-label="Projector display">
+      <div className="ctl-projector-head">
+        <p className="ctl-projector-title">Projector display</p>
+        <span className={`ctl-pill ${projector ? "is-on" : ""}`}>
+          <span className="ctl-conn" aria-hidden="true" />
+          {projector ? "Connected" : "Not open"}
+        </span>
+      </div>
+      <p className="ctl-muted ctl-small ctl-projector-sub">
+        {projector ? "Changes show on the desk right away." : "Open localhost:5173/desk on the projector screen."}
+      </p>
+
+      <p className="ctl-label">Desk colour</p>
+      <div className="ctl-theme-choices" role="radiogroup" aria-label="Desk colour">
+        {THEMES.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="radio"
+            aria-checked={settings.theme === t.id}
+            className={`ctl-theme-choice ${settings.theme === t.id ? "is-on" : ""}`}
+            onClick={() => updateDeskSettings({ theme: t.id })}
+          >
+            <span className={`ctl-theme-swatch ctl-swatch-${t.id}`} aria-hidden="true">
+              <span className="ctl-swatch-panel">
+                <span className="ctl-swatch-line" />
+                <span className="ctl-swatch-line is-short" />
+              </span>
+            </span>
+            <span className="ctl-theme-name">{t.name}</span>
+            <span className="ctl-theme-hint">{t.hint}</span>
+          </button>
+        ))}
+      </div>
+
+      <p className="ctl-label">Show on desk</p>
+      <div className="ctl-show-row">
+        {SHOW.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={settings[key]}
+            className={`ctl-chip ${settings[key] ? "is-on" : ""}`}
+            onClick={() => updateDeskSettings({ [key]: !settings[key] })}
+          >
+            <span className="ctl-chip-box" aria-hidden="true">{settings[key] ? "✓" : ""}</span>
+            {label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ---------- What PLocked sees (moved here from the desk) ----------
+
+const ACTIVITY_WORDS = { relevant: "on task", unrelated: "off task", uncertain: "not sure", unknown: "—" };
+const CAMERA_WORDS = { present: "at desk", away: "away", phone_in_hand: "phone in hand", unknown: "off" };
+
+function SeesCard({ activity, camera }) {
+  const label = activity?.label ?? "unknown";
+  const cam = camera?.state ?? "unknown";
+  return (
+    <section className="ctl-card ctl-sees" aria-label="What PLocked sees">
+      <p className="ctl-label">PLocked sees</p>
+      <div className="ctl-sees-row">
+        <span className={`ctl-led ctl-led-${label}`} aria-hidden="true" />
+        <span className="ctl-sees-name">{activity?.domain ?? "no site yet"}</span>
+        <span className="ctl-sees-word">{ACTIVITY_WORDS[label] ?? label}</span>
+      </div>
+      <div className="ctl-sees-row">
+        <span className={`ctl-led ctl-led-cam-${cam}`} aria-hidden="true" />
+        <span className="ctl-sees-name">Camera</span>
+        <span className="ctl-sees-word">{CAMERA_WORDS[cam] ?? cam}</span>
+      </div>
+    </section>
   );
 }

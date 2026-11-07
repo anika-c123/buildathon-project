@@ -40,6 +40,7 @@ body {
     radial-gradient(50% 40% at 85% 10%, rgba(255, 255, 255, 0.9) 0%, transparent 70%),
     #ebe9ee;
   background-attachment: fixed;
+  background-size: 100% 100vh; /* keep the blush/lavender glow covering the screen while scrolling */
 }
 
 /* ---------- Connecting banner ---------- */
@@ -124,28 +125,11 @@ body {
   letter-spacing: -0.02em;
 }
 
-.ctl-subtitle {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--ctl-muted);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: var(--ctl-glass-strong);
-  border: 1px solid var(--ctl-line);
-}
-
 .ctl-conn {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--ctl-accent);
-}
-
-.ctl-conn.is-on {
-  background: #5fb37f;
+  flex: none;
 }
 
 /* ---------- Layout: main card + side column ---------- */
@@ -896,45 +880,6 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Desk: Dark / Light switch (in the header) ---------- */
-
-.ctl-seg {
-  margin-left: auto;
-  margin-right: 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid var(--ctl-line);
-}
-
-.ctl-seg-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ctl-muted);
-  padding: 0 6px 0 8px;
-}
-
-.ctl-seg-btn {
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ctl-muted);
-  background: transparent;
-  border: none;
-  border-radius: 999px;
-  padding: 5px 12px;
-  cursor: pointer;
-}
-
-.ctl-seg-btn.is-on {
-  background: #fff;
-  color: var(--ctl-ink);
-  box-shadow: 0 2px 8px rgba(116, 86, 140, 0.15);
-}
-
 /* ---------- All steps done ---------- */
 
 .ctl-done {
@@ -957,4 +902,293 @@ code {
 
 .ctl-done .ctl-label {
   margin: 0;
+}
+
+/* ---------- Header status pills ---------- */
+
+.ctl-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ctl-pill {
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ctl-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--ctl-glass-strong);
+  border: 1px solid var(--ctl-line);
+  white-space: nowrap;
+}
+
+.ctl-pill.is-on {
+  color: var(--ctl-ink);
+}
+
+.ctl-pill .ctl-conn {
+  background: #c9b9a8;
+}
+
+.ctl-pill.is-on .ctl-conn {
+  background: #5fb37f;
+  box-shadow: 0 0 0 3px rgba(95, 179, 127, 0.18);
+}
+
+.ctl-pill-btn {
+  cursor: pointer;
+  color: var(--ctl-ink);
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(116, 86, 140, 0.1);
+}
+
+.ctl-pill-btn:hover {
+  box-shadow: 0 6px 18px rgba(116, 86, 140, 0.18);
+}
+
+/* ---------- Projector display card ---------- */
+
+.ctl-projector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+}
+
+.ctl-projector.is-flash {
+  animation: ctl-flash 1.4s ease-out;
+}
+
+@keyframes ctl-flash {
+  0%,
+  40% {
+    box-shadow: 0 0 0 4px rgba(238, 124, 79, 0.45), var(--ctl-shadow);
+  }
+}
+
+.ctl-projector-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.ctl-projector-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ctl-projector-sub {
+  margin: -4px 0 6px;
+}
+
+.ctl-projector .ctl-label {
+  margin: 4px 0 0;
+}
+
+.ctl-theme-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ctl-theme-choice {
+  font: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.ctl-theme-choice:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.ctl-theme-choice.is-on {
+  background: #fff;
+  border-color: var(--ctl-accent);
+  box-shadow: 0 8px 20px rgba(238, 124, 79, 0.18);
+}
+
+/* Tiny preview of what the desk will look like. */
+.ctl-theme-swatch {
+  height: 56px;
+  border-radius: 14px;
+  background: #000;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+}
+
+.ctl-swatch-panel {
+  width: 72%;
+  height: 34px;
+  border-radius: 9px;
+  border: 2px solid #f5a3c7;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 9px;
+}
+
+.ctl-swatch-line {
+  height: 4px;
+  border-radius: 4px;
+  width: 80%;
+}
+
+.ctl-swatch-line.is-short {
+  width: 50%;
+}
+
+.ctl-swatch-dark .ctl-swatch-panel {
+  background: #000;
+}
+
+.ctl-swatch-dark .ctl-swatch-line {
+  background: #fff6f1;
+}
+
+.ctl-swatch-light .ctl-swatch-panel {
+  background: #f6efec;
+}
+
+.ctl-swatch-light .ctl-swatch-line {
+  background: #261f28;
+}
+
+.ctl-theme-name {
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.ctl-theme-hint {
+  font-size: 12px;
+  color: var(--ctl-muted);
+}
+
+.ctl-show-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ctl-chip {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(42, 40, 47, 0.14);
+  background: transparent;
+  color: var(--ctl-muted);
+  cursor: pointer;
+}
+
+.ctl-chip.is-on {
+  background: #fff;
+  color: var(--ctl-ink);
+  border-color: var(--ctl-line);
+  box-shadow: 0 4px 12px rgba(116, 86, 140, 0.1);
+}
+
+.ctl-chip-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: #fff;
+  border: 1.5px solid rgba(42, 40, 47, 0.2);
+}
+
+.ctl-chip.is-on .ctl-chip-box {
+  border-color: transparent;
+  background: linear-gradient(135deg, #f49a74, #e2708b);
+}
+
+/* ---------- PLocked sees ---------- */
+
+.ctl-sees {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 24px;
+}
+
+.ctl-sees .ctl-label {
+  margin: 0;
+}
+
+.ctl-sees-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ctl-sees-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ctl-sees-word {
+  color: var(--ctl-muted);
+  font-size: 14px;
+}
+
+.ctl-led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  background: #cbc4cf;
+}
+
+.ctl-led-relevant,
+.ctl-led-cam-present {
+  background: #5fb37f;
+  box-shadow: 0 0 0 3px rgba(95, 179, 127, 0.18);
+}
+
+.ctl-led-unrelated,
+.ctl-led-cam-phone_in_hand {
+  background: var(--ctl-accent);
+  box-shadow: 0 0 0 3px rgba(238, 124, 79, 0.18);
+}
+
+.ctl-led-uncertain,
+.ctl-led-cam-away {
+  background: var(--ctl-lilac);
+}
+
+/* Left column: the main card with the projector settings under it. */
+.ctl-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
 }

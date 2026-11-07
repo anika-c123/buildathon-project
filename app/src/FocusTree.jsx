@@ -38,7 +38,8 @@ export default function FocusTree({ focusedMs, stepsDone, stepsTotal }) {
 
   return (
     <div className="dsk-tree">
-      <svg viewBox="0 0 200 220" role="img" aria-label={`Focus tree with ${marbles.length} marbles`}>
+      {/* The view is cropped to where the tree actually grows, so it fills its space. */}
+      <svg viewBox="38 34 124 184" preserveAspectRatio="xMidYMax meet" role="img" aria-label={`Focus tree with ${marbles.length} marbles`}>
         <defs>
           <linearGradient id="tree-leaf" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="var(--tree-leaf-a)" />
