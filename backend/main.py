@@ -100,7 +100,7 @@ async def post_event(request: Request):
 
     if message["type"] == "user_action":
         action = message["data"].get("action")
-        changed, extra = session.apply_action(action, message["data"])
+        changed, extra = await session.apply_action(action, message["data"])
         if changed:
             await broadcast("session_update", session.snapshot())
         if extra:

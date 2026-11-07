@@ -33,6 +33,16 @@ def _get_client() -> AsyncAnthropic:
     return _client
 
 
+def _text_of(response) -> str:
+    """The response's first text block. Claude can also return non-text
+    blocks (e.g. a ThinkingBlock) before the actual answer, so content[0]
+    isn't always it."""
+    for block in response.content:
+        if getattr(block, "type", None) == "text":
+            return block.text.strip()
+    raise ValueError("response had no text block")
+
+
 def _prompt(goal: str, domain: str, title: str) -> str:
     return (
         f'A student\'s goal is: "{goal}"\n'
@@ -59,12 +69,15 @@ async def check_relevance(goal: str, domain: str, title: str) -> tuple[str, str 
         response = await asyncio.wait_for(
             client.messages.create(
                 model=MODEL,
-                max_tokens=10,
+                # Generous for a one-word answer: any reasoning Claude does
+                # before answering counts against this too, and 10 tokens
+                # left zero room for that, risking a truncated response.
+                max_tokens=100,
                 messages=[{"role": "user", "content": _prompt(goal, domain, title)}],
             ),
             timeout=TIMEOUT_SECONDS,
         )
-        label = response.content[0].text.strip().lower()
+        label = _text_of(response).lower()
         if label not in VALID_LABELS:
             label = "uncertain"
     except Exception as exc:

@@ -3,18 +3,19 @@
 B1 (session state + user_action) plus the state this session needs to
 support B4's nudge rules: who's being watched for a nudge (camera, tab
 activity), who's already been marked relevant, and the cooldown/away
-bookkeeping nudges.py's tick() reads and writes. `plan` still returns a
-fixed stand-in instead of calling the AI (real version: B10).
+bookkeeping nudges.py's tick() reads and writes. `plan` and the summary
+note call the real AI (B10/B12) via ai.py, which is why every user_action
+handler is async even though most of them don't actually await anything.
 """
 
 import json
 import time
 from pathlib import Path
 
+import ai
+
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "shared" / "examples"
 DEFAULT_BREAK_MINUTES = 5
-DEMO_GOAL = "Finish my Java assignment"
-DEMO_STEPS = ["Read the requirements", "Write the insert method", "Test it", "Submit"]
 
 
 def load_example(filename: str) -> dict:
@@ -164,7 +165,7 @@ class Session:
         self._wording_index[reason] = index + 1
         return index
 
-    def apply_action(self, action: str, fields: dict):
+    async def apply_action(self, action: str, fields: dict):
         """Applies one user_action. Returns (state_changed, extra_message),
         where extra_message is None or (type, data) for a one-off message
         (plan_result / reentry / summary) to send alongside session_update."""
@@ -172,22 +173,14 @@ class Session:
         if handler is None:
             print(f"[session] unknown action: {action!r}")
             return False, None
-        return handler(fields)
+        return await handler(fields)
 
-    def _handle_plan(self, fields):
+    async def _handle_plan(self, fields):
         goal = (fields.get("goal") or "").strip()
-        if goal.lower() == DEMO_GOAL.lower():
-            steps = DEMO_STEPS
-        else:
-            steps = [
-                "Figure out exactly what's needed",
-                "Do the main work",
-                "Check it over",
-                "Submit / wrap up",
-            ]
+        steps = await ai.break_into_steps(goal)
         return False, ("plan_result", {"steps": steps})
 
-    def _handle_start_session(self, fields):
+    async def _handle_start_session(self, fields):
         steps = [{"text": text, "done": False} for text in fields.get("steps", [])]
         started_at = now_ms()
         minutes = fields.get("minutes", 60)
@@ -209,7 +202,7 @@ class Session:
         }
         return True, None
 
-    def _handle_step_done(self, fields):
+    async def _handle_step_done(self, fields):
         if self.state["status"] not in ("studying", "break"):
             return False, None
         steps = self.state["steps"]
@@ -219,7 +212,7 @@ class Session:
             self.state["current_step"] = i + 1 if i + 1 < len(steps) else -1
         return True, None
 
-    def _handle_break(self, fields):
+    async def _handle_break(self, fields):
         if self.state["status"] != "studying":
             return False, None
         minutes = fields.get("minutes", DEFAULT_BREAK_MINUTES)
@@ -235,7 +228,7 @@ class Session:
         self._breaks += 1
         return True, None
 
-    def _handle_resume(self, fields):
+    async def _handle_resume(self, fields):
         if self.state["status"] != "break":
             return False, None
         self.state["status"] = "studying"
@@ -243,18 +236,18 @@ class Session:
         self._study_segment_started_at = now_ms()
         return True, ("reentry", self.reentry_message())
 
-    def _handle_park(self, fields):
+    async def _handle_park(self, fields):
         self.state["parked"].append({"text": fields["text"], "timestamp": now_ms()})
         return True, None
 
-    def _handle_dismiss(self, fields):
+    async def _handle_dismiss(self, fields):
         self.state["active_nudge"] = None
         self._active_nudge_domain = None
         self._last_nudge_cleared_at = now_ms()
         self._nudges_dismissed += 1
         return True, None
 
-    def _handle_relevant(self, fields):
+    async def _handle_relevant(self, fields):
         # Whitelist whatever tab the student is actually looking at right
         # now, not necessarily the tab that originally triggered the nudge
         # still on screen (they may have switched tabs since). Contract §4
@@ -267,10 +260,10 @@ class Session:
         self._active_nudge_domain = None
         return True, None
 
-    def _handle_end_session(self, fields):
+    async def _handle_end_session(self, fields):
         if self.state["status"] == "idle":
             return False, None
-        summary = self._summary()
+        summary = await self._summary()
         self.state = load_example("session_update_idle.json")
         return True, ("summary", summary)
 
@@ -284,18 +277,17 @@ class Session:
             }
         return {"message": "Welcome back!", "step_text": None}
 
-    def _summary(self) -> dict:
+    async def _summary(self) -> dict:
         steps = self.state["steps"]
         started_at = self.state["started_at"] or now_ms()
         steps_done = sum(1 for step in steps if step["done"])
         steps_total = len(steps)
-        note = (
-            "Finished every step — nice work!"
-            if steps_total and steps_done == steps_total
-            else f"Good session — {steps_done}/{steps_total} steps done."
+        minutes_studied = max(0, round((now_ms() - started_at) / 60_000))
+        note = await ai.write_summary_note(
+            self.state["goal"], steps_done, steps_total, self._nudges_fired, minutes_studied
         )
         return {
-            "minutes_studied": max(0, round((now_ms() - started_at) / 60_000)),
+            "minutes_studied": minutes_studied,
             "steps_done": steps_done,
             "steps_total": steps_total,
             "nudges": self._nudges_fired,

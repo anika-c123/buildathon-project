@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "PLocked",
+  "version": "0.1.0",
+  "description": "Reports the active tab's site and title to the PLocked backend during a study session.",
+  "permissions": ["tabs"],
+  "host_permissions": ["http://localhost:8000/*"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
