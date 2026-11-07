@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "source": "vision",
+  "type": "camera_state",
+  "data": {
+    "state": "phone_in_hand",
+    "confidence": 0.82
+  },
+  "timestamp": 1762540000000
+}

@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "source": "app",
+  "type": "user_action",
+  "data": {
+    "action": "dismiss",
+    "nudge_id": "n3"
+  },
+  "timestamp": 1762540000000
+}

@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "source": "extension",
+  "type": "tab_change",
+  "data": {
+    "domain": null,
+    "title": null,
+    "focused": false
+  },
+  "timestamp": 1762540000000
+}

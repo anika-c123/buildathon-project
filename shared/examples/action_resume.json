@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "source": "app",
+  "type": "user_action",
+  "data": {
+    "action": "resume"
+  },
+  "timestamp": 1762540000000
+}

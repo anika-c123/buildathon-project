@@ -1,0 +1,28 @@
+{
+  "v": 1,
+  "source": "backend",
+  "type": "session_update",
+  "data": {
+    "status": "idle",
+    "goal": null,
+    "steps": [],
+    "current_step": -1,
+    "started_at": null,
+    "ends_at": null,
+    "break_ends_at": null,
+    "demo_mode": false,
+    "parked": [],
+    "activity": {
+      "domain": null,
+      "title": null,
+      "label": "unknown",
+      "since": null
+    },
+    "camera": {
+      "state": "unknown",
+      "since": null
+    },
+    "active_nudge": null
+  },
+  "timestamp": 1762540000000
+}

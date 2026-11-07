@@ -14,25 +14,24 @@ Our team is not very technical. Whenever you use a technical term, explain it in
 | `vision/` | Eyes | Python + OpenCV code that reads the camera and reports: present, away, or phone in hand. |
 | `app/` | Face | A web app for typing the goal, plus the full-screen view shown through the projector (goal, steps, progress, and session timer). |
 
-Each person mostly works in their own folder. Don't change another role's folder unless asked.
+Each person works only in their own folder — never change another role's folder, even for a one-line fix, without asking that person first. Shared files (`docs/`, `shared/`, `CLAUDE.md`, `README.md`, `.gitignore`, `.env.example`) change only after the whole team agrees.
 
 ## How the parts talk
 
-All parts connect to the backend over a WebSocket (a live connection, like a group chat for programs) at `ws://localhost:8000/ws`.
+The full rules live in [`docs/CONTRACT.md`](docs/CONTRACT.md) — that file is the source of truth; read it before building anything that sends or receives a message. Short version:
 
-Every message uses this shape:
+- Everyone **sends** by `POST`ing to `http://localhost:8000/event`. Only the app **listens**, over a WebSocket (a connection that stays open so the backend can push updates the instant something changes, like a live group chat for programs) at `ws://localhost:8000/ws`.
+- Every message shares one envelope, including a version number so everyone can tell if the shape ever changes:
 
 ```json
-{ "source": "extension | vision | backend | app", "type": "tab_change | camera_state | nudge | session_update | user_action", "data": {}, "timestamp": 0 }
+{ "v": 1, "source": "extension | vision | app | backend", "type": "tab_change | camera_state | user_action | session_update | reentry | plan_result | summary | error", "data": {}, "timestamp": 0 }
 ```
 
-Examples:
-- `tab_change`: `{ "domain": "youtube.com", "title": "Java Tutorial for Beginners" }`
-- `camera_state`: `{ "state": "present | away | phone_in_hand", "confidence": 0.85 }`
-- `nudge`: `{ "message": "Ready to get back to your Java assignment?" }`
-- `user_action`: `{ "action": "dismiss | break | relevant | step_done" }`
+- `data` differs per `type` — see `docs/CONTRACT.md` and the ready-made example of every message in `shared/examples/`.
+- `user_action` covers every button in the app: `plan`, `start_session`, `step_done`, `dismiss`, `relevant`, `break`, `resume`, `park`, `end_session`.
+- There's no separate `nudge` message — the current nudge, if any, lives inside `session_update.active_nudge`.
 
-If this format needs to change, tell the user so the whole team can agree first.
+Adding a new optional field or message type is fine without a team meeting. Changing or removing something needs all three of you to agree first (contract §7).
 
 `backend/fake_events.py` sends pretend messages so each part can be built and tested before the others are ready.
 

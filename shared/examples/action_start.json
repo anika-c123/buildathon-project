@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "source": "app",
+  "type": "user_action",
+  "data": {
+    "action": "start_session",
+    "goal": "Finish my Java assignment",
+    "steps": [
+      "Read the requirements",
+      "Write the insert method",
+      "Test it",
+      "Submit"
+    ],
+    "minutes": 60,
+    "demo_mode": true
+  },
+  "timestamp": 1762540000000
+}

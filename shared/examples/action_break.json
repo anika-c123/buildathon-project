@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "source": "app",
+  "type": "user_action",
+  "data": {
+    "action": "break",
+    "minutes": 5
+  },
+  "timestamp": 1762540000000
+}

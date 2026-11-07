@@ -1,0 +1,54 @@
+{
+  "v": 1,
+  "source": "backend",
+  "type": "session_update",
+  "data": {
+    "status": "studying",
+    "goal": "Finish my Java assignment",
+    "steps": [
+      {
+        "text": "Read the requirements",
+        "done": true
+      },
+      {
+        "text": "Write the insert method",
+        "done": false
+      },
+      {
+        "text": "Test it",
+        "done": false
+      },
+      {
+        "text": "Submit",
+        "done": false
+      }
+    ],
+    "current_step": 1,
+    "started_at": 1762540000000,
+    "ends_at": 1762543600000,
+    "break_ends_at": null,
+    "demo_mode": true,
+    "parked": [
+      {
+        "text": "Email my TA",
+        "timestamp": 1762540300000
+      }
+    ],
+    "activity": {
+      "domain": "instagram.com",
+      "title": "Instagram",
+      "label": "unrelated",
+      "since": 1762540600000
+    },
+    "camera": {
+      "state": "present",
+      "since": 1762540100000
+    },
+    "active_nudge": {
+      "id": "n3",
+      "reason": "unrelated_tab",
+      "message": "Ready to get back to your Java assignment?"
+    }
+  },
+  "timestamp": 1762540000000
+}

@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "source": "backend",
+  "type": "error",
+  "data": {
+    "message": "AI service didn't respond; treating the site as uncertain."
+  },
+  "timestamp": 1762540000000
+}

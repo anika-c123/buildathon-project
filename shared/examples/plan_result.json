@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "source": "backend",
+  "type": "plan_result",
+  "data": {
+    "steps": [
+      "Read the requirements",
+      "Write the insert method",
+      "Test it",
+      "Submit"
+    ]
+  },
+  "timestamp": 1762540000000
+}

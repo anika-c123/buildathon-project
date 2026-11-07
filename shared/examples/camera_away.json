@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "source": "vision",
+  "type": "camera_state",
+  "data": {
+    "state": "away",
+    "confidence": 0.88
+  },
+  "timestamp": 1762540000000
+}

@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "source": "extension",
+  "type": "tab_change",
+  "data": {
+    "domain": "instagram.com",
+    "title": "Instagram",
+    "focused": true
+  },
+  "timestamp": 1762540000000
+}

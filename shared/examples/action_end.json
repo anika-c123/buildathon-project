@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "source": "app",
+  "type": "user_action",
+  "data": {
+    "action": "end_session"
+  },
+  "timestamp": 1762540000000
+}

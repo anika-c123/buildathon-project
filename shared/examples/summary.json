@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "source": "backend",
+  "type": "summary",
+  "data": {
+    "minutes_studied": 52,
+    "steps_done": 3,
+    "steps_total": 4,
+    "nudges": 3,
+    "nudges_dismissed": 1,
+    "breaks": 1,
+    "parked": [
+      "Email my TA"
+    ],
+    "note": "Strong session — you got back on track quickly after each detour."
+  },
+  "timestamp": 1762540000000
+}

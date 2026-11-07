@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "source": "app",
+  "type": "user_action",
+  "data": {
+    "action": "park",
+    "text": "Email my TA"
+  },
+  "timestamp": 1762540000000
+}

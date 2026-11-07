@@ -1,12 +1,19 @@
 # Secrets (API keys) — never upload
 .env
 
+# macOS folder-view file — not part of the project
+.DS_Store
+
 # Downloaded JavaScript packages (re-installable)
 node_modules/
 
 # Python's automatic temporary files
 __pycache__/
 *.pyc
+
+# Python virtual environments (re-installable from requirements.txt)
+.venv/
+venv/
 
 # Video files — we never save camera video
 *.mp4

@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "source": "backend",
+  "type": "reentry",
+  "data": {
+    "message": "Welcome back — you were on step 2: Write the insert method",
+    "step_text": "Write the insert method"
+  },
+  "timestamp": 1762540000000
+}

@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "source": "extension",
+  "type": "tab_change",
+  "data": {
+    "domain": "docs.oracle.com",
+    "title": "HashMap (Java SE 21)",
+    "focused": true
+  },
+  "timestamp": 1762540000000
+}

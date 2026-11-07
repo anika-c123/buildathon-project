@@ -1,0 +1,50 @@
+{
+  "v": 1,
+  "source": "backend",
+  "type": "session_update",
+  "data": {
+    "status": "break",
+    "goal": "Finish my Java assignment",
+    "steps": [
+      {
+        "text": "Read the requirements",
+        "done": true
+      },
+      {
+        "text": "Write the insert method",
+        "done": false
+      },
+      {
+        "text": "Test it",
+        "done": false
+      },
+      {
+        "text": "Submit",
+        "done": false
+      }
+    ],
+    "current_step": 1,
+    "started_at": 1762540000000,
+    "ends_at": 1762543600000,
+    "break_ends_at": 1762540900000,
+    "demo_mode": true,
+    "parked": [
+      {
+        "text": "Email my TA",
+        "timestamp": 1762540300000
+      }
+    ],
+    "activity": {
+      "domain": "docs.oracle.com",
+      "title": "HashMap (Java SE 21)",
+      "label": "relevant",
+      "since": 1762540500000
+    },
+    "camera": {
+      "state": "present",
+      "since": 1762540100000
+    },
+    "active_nudge": null
+  },
+  "timestamp": 1762540000000
+}

@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "source": "app",
+  "type": "user_action",
+  "data": {
+    "action": "step_done"
+  },
+  "timestamp": 1762540000000
+}
