@@ -155,7 +155,7 @@ export default function Desk() {
           reentry={reentry}
           celebration={celebration}
         />
-        <TimePanel timeLeft={timeLeft} onBreak={onBreak} goal={data.goal} />
+        <ProgressPanel steps={steps} timeLeft={timeLeft} onBreak={onBreak} goal={data.goal} />
         <QuotePanel />
         <ParkedPanel items={data.parked} />
         <div className="dsk-laptop-zone" aria-hidden="true">
@@ -265,15 +265,28 @@ function Celebration() {
   );
 }
 
-// ---------- Time: shrinking bar, no numbers ----------
+// ---------- Progress: steps done (thick bar) + session time (thin line) ----------
+// The thick bar matches the laptop's progress bar: it fills as steps are ticked
+// off. The thin line under it is the calm session timer (CLAUDE.md): it shrinks
+// as time passes, shows no numbers, and pauses during a break.
 
-function TimePanel({ timeLeft, onBreak, goal }) {
+function ProgressPanel({ steps, timeLeft, onBreak, goal }) {
+  const done = steps.filter((s) => s.done).length;
+  const fraction = steps.length ? done / steps.length : 0;
   return (
     <Panel className="dsk-time">
-      <p className="dsk-label">{onBreak ? "Session · paused" : "Session"}</p>
+      <p className="dsk-label">
+        Progress · {done} of {steps.length} steps
+      </p>
       <p className="dsk-goal">{goal}</p>
-      <div className={`dsk-bar ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
-        <div className="dsk-bar-fill" style={{ width: `${timeLeft * 100}%` }} />
+      <div className="dsk-progress-block">
+        <div className="dsk-bar" aria-hidden="true">
+          <div className="dsk-bar-fill" style={{ width: `${fraction * 100}%` }} />
+        </div>
+        <div className={`dsk-timeline ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
+          <div className="dsk-timeline-fill" style={{ width: `${timeLeft * 100}%` }} />
+        </div>
+        <p className="dsk-timeline-label">{onBreak ? "time · paused" : "time"}</p>
       </div>
     </Panel>
   );

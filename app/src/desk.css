@@ -194,10 +194,18 @@
   }
 }
 
-/* ---------- Bars (session time, break): thick, rounded ---------- */
+/* ---------- Bars ----------
+   Thick bar = steps done (fills like the laptop's progress bar).
+   Thin line under it = session time, shrinking, no numbers. */
+
+.dsk-progress-block {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+}
 
 .dsk-bar {
-  margin-top: auto;
   height: clamp(16px, 3.4vh, 38px);
   border-radius: 999px;
   border: 2px solid var(--dsk-faint);
@@ -206,21 +214,49 @@
 
 .dsk-bar-fill {
   height: 100%;
+  min-width: 0;
   border-radius: 999px;
   background: var(--dsk-edge);
   box-shadow: 0 0 1vw rgba(245, 163, 199, 0.45);
+  transition: width 0.9s cubic-bezier(0.34, 1.4, 0.64, 1); /* a little bounce when a step is done */
+}
+
+.dsk-timeline {
+  height: clamp(3px, 0.5vh, 6px);
+  border-radius: 999px;
+  background: #1c171d;
+  overflow: hidden;
+}
+
+.dsk-timeline-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--dsk-soft);
+  opacity: 0.7;
   transition: width 1s linear;
 }
 
-.dsk-bar.is-paused .dsk-bar-fill,
+.dsk-timeline.is-paused .dsk-timeline-fill {
+  background: var(--dsk-lilac);
+}
+
+.dsk-timeline-label {
+  margin: 0;
+  font-size: clamp(9px, 0.85vw, 18px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dsk-faint);
+}
+
+/* The break bar inside the Now panel. */
+.dsk-bar-break {
+  width: 70%;
+}
+
 .dsk-bar-break .dsk-bar-fill {
   background: linear-gradient(90deg, #e2d6ff, #c8b4f5);
   box-shadow: 0 0 1vw rgba(200, 180, 245, 0.45);
-}
-
-.dsk-bar-break {
-  margin-top: 0;
-  width: 70%;
+  transition: width 1s linear;
 }
 
 /* ---------- Progress dots + celebration ---------- */
