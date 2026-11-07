@@ -1,0 +1,450 @@
+/* Desk view: projected onto the desk, display only.
+   Pure black background (black = no light from the projector, so the desk
+   shows through) with glowing cream outlined panels, like a desk UI drawn
+   in light. Sizes in vw/vh so it scales with any projector. No red. */
+
+.dsk-screen {
+  --dsk-ink: #f3eedc;
+  --dsk-soft: #bdb7a3;
+  --dsk-faint: #5c584d;
+  --dsk-line: #efe9d4;
+  --dsk-lime: #dcef84;
+  --dsk-sand: #ebc98a;
+  --dsk-serif: "Fraunces Variable", Georgia, serif;
+  --dsk-sans: "Figtree Variable", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+  color: var(--dsk-ink);
+  font-family: var(--dsk-sans);
+  cursor: none; /* hide the mouse pointer on the projection */
+}
+
+/* ---------- Layout ---------- */
+/*  [ Now (big)           ][ Time   ]
+    [ Parked ][ laptop    ][ Status ]  */
+
+.dsk-grid {
+  position: absolute;
+  inset: 4vh 3vw;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  grid-template-rows: 1.35fr 1fr;
+  grid-template-areas:
+    "now now time"
+    "parked laptop status";
+  gap: 2.4vw;
+}
+
+.dsk-now {
+  grid-area: now;
+}
+.dsk-time {
+  grid-area: time;
+}
+.dsk-parked {
+  grid-area: parked;
+}
+.dsk-status {
+  grid-area: status;
+}
+
+/* ---------- Glowing panel ---------- */
+
+.dsk-panel {
+  position: relative;
+  border: clamp(2px, 0.22vw, 4px) solid var(--dsk-line);
+  border-radius: 2.2vw;
+  padding: 3.4vh 2.4vw;
+  box-shadow:
+    0 0 1.2vw rgba(239, 233, 212, 0.28),
+    inset 0 0 1.2vw rgba(239, 233, 212, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 2vh;
+  min-width: 0;
+  min-height: 0;
+  transition: border-color 0.6s, box-shadow 0.6s;
+}
+
+.dsk-tone-nudge {
+  border-color: var(--dsk-lime);
+  animation: dsk-breathe 3s ease-in-out infinite;
+}
+
+@keyframes dsk-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 1.2vw rgba(220, 239, 132, 0.3),
+      inset 0 0 1.2vw rgba(220, 239, 132, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 2.6vw rgba(220, 239, 132, 0.55),
+      inset 0 0 1.8vw rgba(220, 239, 132, 0.18);
+  }
+}
+
+.dsk-tone-break {
+  border-color: var(--dsk-sand);
+  box-shadow:
+    0 0 1.2vw rgba(235, 201, 138, 0.3),
+    inset 0 0 1.2vw rgba(235, 201, 138, 0.1);
+}
+
+.dsk-tone-welcome {
+  border-color: var(--dsk-lime);
+}
+
+/* The spot where the laptop sits: just a dashed outline, nothing projected inside. */
+.dsk-laptop-zone {
+  grid-area: laptop;
+  border: clamp(2px, 0.18vw, 3px) dashed var(--dsk-faint);
+  border-radius: 2.2vw;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 2vh;
+}
+
+.dsk-laptop-zone span {
+  font-size: clamp(11px, 1vw, 20px);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dsk-faint);
+}
+
+/* ---------- Type ---------- */
+
+.dsk-label {
+  margin: 0;
+  font-size: clamp(11px, 1.05vw, 22px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dsk-soft);
+}
+
+.dsk-kicker {
+  margin: 0;
+  font-size: clamp(13px, 1.45vw, 30px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dsk-lime);
+}
+
+.dsk-tone-break .dsk-kicker {
+  color: var(--dsk-sand);
+}
+
+.dsk-welcome {
+  text-transform: none;
+  letter-spacing: 0;
+  animation: dsk-rise 0.6s ease-out;
+}
+
+.dsk-big {
+  margin: 0;
+  font-family: var(--dsk-serif);
+  font-variation-settings: "SOFT" 100, "WONK" 0;
+  font-size: clamp(26px, 4.1vw, 88px);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  animation: dsk-rise 0.6s ease-out;
+}
+
+.dsk-nudge-text {
+  font-size: clamp(24px, 3.6vw, 78px);
+}
+
+.dsk-hint {
+  margin: auto 0 0;
+  font-size: clamp(12px, 1.25vw, 26px);
+  color: var(--dsk-soft);
+}
+
+.dsk-quiet {
+  margin: 0;
+  font-size: clamp(13px, 1.4vw, 28px);
+  color: var(--dsk-faint);
+}
+
+.dsk-goal {
+  margin: 0;
+  font-family: var(--dsk-serif);
+  font-variation-settings: "SOFT" 100, "WONK" 0;
+  font-size: clamp(16px, 1.9vw, 40px);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+@keyframes dsk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.5vh);
+  }
+}
+
+/* ---------- Bars (session time, break) ---------- */
+
+.dsk-bar {
+  margin-top: auto;
+  height: clamp(10px, 1.6vh, 20px);
+  border-radius: 999px;
+  border: 2px solid var(--dsk-faint);
+  overflow: hidden;
+}
+
+.dsk-bar-fill {
+  height: 100%;
+  background: var(--dsk-ink);
+  border-radius: 999px;
+  transition: width 1s linear;
+}
+
+.dsk-bar.is-paused .dsk-bar-fill,
+.dsk-bar-break .dsk-bar-fill {
+  background: var(--dsk-sand);
+}
+
+.dsk-bar-break {
+  margin-top: 0;
+  width: 70%;
+}
+
+/* ---------- Progress dots + celebration ---------- */
+
+.dsk-dots-row {
+  position: relative;
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+.dsk-dots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 1.4vw;
+}
+
+.dsk-dot {
+  width: clamp(13px, 1.4vw, 28px);
+  height: clamp(13px, 1.4vw, 28px);
+  border-radius: 50%;
+  border: 3px solid var(--dsk-faint);
+  transition: background 0.4s, border-color 0.4s, transform 0.4s;
+}
+
+.dsk-dot-done {
+  background: var(--dsk-lime);
+  border-color: var(--dsk-lime);
+  box-shadow: 0 0 0.8vw rgba(220, 239, 132, 0.5);
+}
+
+.dsk-dot-current {
+  border-color: var(--dsk-ink);
+}
+
+.dsk-dot-pop {
+  animation: dsk-pop 0.7s ease-out;
+}
+
+@keyframes dsk-pop {
+  40% {
+    transform: scale(1.8);
+  }
+}
+
+.dsk-celebrate {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.dsk-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(7px, 0.7vw, 13px);
+  height: clamp(7px, 0.7vw, 13px);
+  margin: calc(clamp(7px, 0.7vw, 13px) / -2);
+  border-radius: 50%;
+  background: var(--dsk-lime);
+  opacity: 0;
+  animation: dsk-spark 0.9s ease-out var(--delay) forwards;
+}
+
+.dsk-spark:nth-child(3n + 1) {
+  background: var(--dsk-sand);
+}
+
+@keyframes dsk-spark {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--angle)) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(-7vw) scale(0.4);
+  }
+}
+
+.dsk-nice {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  margin-left: 2vw;
+  font-family: var(--dsk-serif);
+  font-variation-settings: "SOFT" 100, "WONK" 0;
+  font-size: clamp(18px, 2.1vw, 44px);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--dsk-sand);
+  white-space: nowrap;
+  animation: dsk-nice 1.5s ease-out forwards;
+}
+
+@keyframes dsk-nice {
+  0% {
+    opacity: 0;
+    transform: translate(-1vw, -50%);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(2vw, -50%);
+  }
+}
+
+/* ---------- Parked ---------- */
+
+.dsk-parked ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vh;
+  font-size: clamp(13px, 1.4vw, 28px);
+}
+
+.dsk-parked li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dsk-parked li::before {
+  content: "· ";
+  color: var(--dsk-soft);
+}
+
+/* ---------- Status ---------- */
+
+.dsk-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9vw;
+  font-size: clamp(13px, 1.35vw, 28px);
+  min-width: 0;
+}
+
+.dsk-status-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dsk-status-word {
+  color: var(--dsk-soft);
+  white-space: nowrap;
+}
+
+.dsk-led {
+  width: clamp(9px, 0.9vw, 18px);
+  height: clamp(9px, 0.9vw, 18px);
+  flex: none;
+  border-radius: 50%;
+  background: var(--dsk-faint);
+}
+
+.dsk-led-relevant,
+.dsk-led-cam-present {
+  background: var(--dsk-lime);
+  box-shadow: 0 0 0.7vw rgba(220, 239, 132, 0.6);
+}
+
+.dsk-led-unrelated,
+.dsk-led-cam-phone_in_hand {
+  background: var(--dsk-sand);
+  box-shadow: 0 0 0.7vw rgba(235, 201, 138, 0.6);
+}
+
+.dsk-led-uncertain,
+.dsk-led-cam-away {
+  background: var(--dsk-soft);
+}
+
+/* ---------- Idle / connecting ---------- */
+
+.dsk-solo {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.dsk-solo-panel {
+  align-items: center;
+  text-align: center;
+  padding: 5vh 5vw;
+}
+
+.dsk-brand {
+  margin: 0;
+  font-family: var(--dsk-serif);
+  font-variation-settings: "SOFT" 100, "WONK" 0;
+  font-size: clamp(28px, 4vw, 80px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.dsk-solo-line {
+  margin: 0;
+  font-size: clamp(15px, 1.7vw, 34px);
+  color: var(--dsk-soft);
+}
+
+.dsk-pulse {
+  width: clamp(10px, 1vw, 20px);
+  height: clamp(10px, 1vw, 20px);
+  border-radius: 50%;
+  background: var(--dsk-sand);
+  animation: dsk-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes dsk-pulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* People sensitive to motion get the same screens without the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .dsk-screen *,
+  .dsk-screen *::before,
+  .dsk-screen *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
