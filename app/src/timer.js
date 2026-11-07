@@ -57,6 +57,7 @@ export function useSessionTime(data) {
     now,
     totalMs,
     remainingMs,
+    focusedMs, // time actually spent focusing (breaks not counted)
     fraction: Math.min(1, remainingMs / totalMs),
     label: minutesLeftLabel(remainingMs, totalMs),
   };

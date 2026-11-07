@@ -3,6 +3,7 @@ import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage, sendAction } from "./connection.js";
 import { addQuote, nextQuote, useQuote, useQuoteRotation } from "./quotes.js";
 import { useSessionTime } from "./timer.js";
+import { setDeskTheme, useDeskTheme } from "./deskTheme.js";
 import "./control.css";
 
 // The laptop control screen (http://localhost:5173/).
@@ -137,6 +138,7 @@ export default function Control() {
           <span className="ctl-orb" aria-hidden="true" />
           <span className="ctl-logo">PLocked</span>
         </span>
+        <DeskThemeSwitch />
         <span className="ctl-subtitle">
           <span className={`ctl-conn ${connected ? "is-on" : ""}`} aria-hidden="true" />
           {connected ? "Connected" : "Offline"}
@@ -372,6 +374,27 @@ function StudyingView({ data, connected, send, onEnd }) {
         ))}
       </ol>
 
+      {allDone && (
+        <div className="ctl-done">
+          <p className="ctl-done-title">All {steps.length} steps done. Nice work!</p>
+          {(data.parked ?? []).length > 0 ? (
+            <>
+              <p className="ctl-label">Parked for later — pick what's next</p>
+              <ul className="ctl-parked-list">
+                {[...data.parked].reverse().map((item, k) => (
+                  <li key={`${item.timestamp}-${k}`}>
+                    <span>{item.text}</span>
+                    <time className="ctl-parked-time">{clock(item.timestamp)}</time>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="ctl-muted ctl-small">Nothing parked. End the session when you're ready.</p>
+          )}
+        </div>
+      )}
+
       <div className="ctl-actions">
         {onBreak ? (
           <button type="button" className="ctl-cta" disabled={!connected} onClick={() => send("resume")}>
@@ -386,7 +409,13 @@ function StudyingView({ data, connected, send, onEnd }) {
             </button>
           )
         )}
-        {!onBreak && (
+        {allDone && !onBreak && (
+          <button type="button" className="ctl-cta" disabled={!connected} onClick={onEnd}>
+            <span>End session &amp; see summary</span>
+            <Arrow />
+          </button>
+        )}
+        {!onBreak && !allDone && (
           <button type="button" className="ctl-btn ctl-btn-secondary" disabled={!connected} onClick={() => send("break")}>
             Take a break
           </button>
@@ -604,5 +633,29 @@ function QuoteCard() {
         </div>
       )}
     </section>
+  );
+}
+
+// ---------- Desk: Dark / Light ----------
+// Dark = glowing outlines and light text (dark desks).
+// Light = lit panels with dark text (light desks). The desk tab follows instantly.
+
+function DeskThemeSwitch() {
+  const theme = useDeskTheme();
+  return (
+    <div className="ctl-seg" role="group" aria-label="Desk projection colours">
+      <span className="ctl-seg-label">Desk</span>
+      {["dark", "light"].map((t) => (
+        <button
+          key={t}
+          type="button"
+          className={`ctl-seg-btn ${theme === t ? "is-on" : ""}`}
+          aria-pressed={theme === t}
+          onClick={() => setDeskTheme(t)}
+        >
+          {t === "dark" ? "Dark" : "Light"}
+        </button>
+      ))}
+    </div>
   );
 }

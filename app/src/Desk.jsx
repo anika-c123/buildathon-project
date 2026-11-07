@@ -3,6 +3,8 @@ import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage } from "./connection.js";
 import { useQuote, useQuoteRotation } from "./quotes.js";
 import { useSessionTime } from "./timer.js";
+import { useDeskTheme } from "./deskTheme.js";
+import FocusTree from "./FocusTree.jsx";
 import "./desk.css";
 
 // The desk view (http://localhost:5173/desk), projected onto the desk.
@@ -114,7 +116,10 @@ export default function Desk() {
         />
         <ProgressPanel steps={steps} time={time} onBreak={onBreak} />
         <QuotePanel />
-        <ParkedPanel items={data.parked} />
+        <Panel className="dsk-treebox">
+          <p className="dsk-label">Focus tree</p>
+          <FocusTree focusedMs={time.focusedMs} stepsDone={doneCount} stepsTotal={steps.length} />
+        </Panel>
         <div className="dsk-laptop-zone" aria-hidden="true">
           <span>laptop</span>
         </div>
@@ -128,8 +133,10 @@ function clamp01(x) {
   return Math.min(1, Math.max(0, x));
 }
 
+// The theme (dark or light desk) is picked on the laptop; see deskTheme.js.
 function Screen({ children }) {
-  return <div className="dsk-screen">{children}</div>;
+  const theme = useDeskTheme();
+  return <div className={`dsk-screen dsk-theme-${theme}`}>{children}</div>;
 }
 
 function Panel({ className = "", tone = "", children }) {
@@ -182,12 +189,16 @@ function NowPanel({ data, steps, onBreak, breakLeft, breakOver, reentry, celebra
         </div>
       )}
       <h1 className="dsk-big" key={i}>
-        {allDone ? "Nice work. Wrap up on the laptop." : steps[i]?.text}
+        {allDone ? "Nice work!" : steps[i]?.text}
       </h1>
-      <div className="dsk-dots-row">
-        <Dots steps={steps} current={i} celebrating={celebration !== null} />
-        {celebration && <Celebration key={celebration} />}
-      </div>
+      {allDone ? (
+        <DoneParked items={data.parked} />
+      ) : (
+        <div className="dsk-dots-row">
+          <Dots steps={steps} current={i} celebrating={celebration !== null} />
+          {celebration && <Celebration key={celebration} />}
+        </div>
+      )}
     </Panel>
   );
 }
@@ -267,23 +278,22 @@ function QuotePanel() {
   );
 }
 
-// ---------- Parked thoughts ----------
+// ---------- Parked thoughts (only once every step is done) ----------
+// While working, parked thoughts stay off the desk (out of sight, so they don't
+// pull attention). When all steps are done, they show here as "what's next".
 
-function ParkedPanel({ items }) {
+function DoneParked({ items }) {
   const list = items ?? [];
+  if (list.length === 0) return <p className="dsk-hint dsk-done-parked-none">Nothing parked. Enjoy the win.</p>;
   return (
-    <Panel className="dsk-parked">
+    <div className="dsk-done-parked">
       <p className="dsk-label">Parked for later</p>
-      {list.length === 0 ? (
-        <p className="dsk-quiet">Nothing yet</p>
-      ) : (
-        <ul>
-          {list.slice(-3).map((item, k) => (
-            <li key={`${item.timestamp}-${k}`}>{item.text}</li>
-          ))}
-        </ul>
-      )}
-    </Panel>
+      <ul>
+        {list.slice(-4).map((item, k) => (
+          <li key={`${item.timestamp}-${k}`}>{item.text}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

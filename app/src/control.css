@@ -895,3 +895,66 @@ code {
   color: var(--ctl-faint);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Desk: Dark / Light switch (in the header) ---------- */
+
+.ctl-seg {
+  margin-left: auto;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--ctl-line);
+}
+
+.ctl-seg-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ctl-muted);
+  padding: 0 6px 0 8px;
+}
+
+.ctl-seg-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ctl-muted);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.ctl-seg-btn.is-on {
+  background: #fff;
+  color: var(--ctl-ink);
+  box-shadow: 0 2px 8px rgba(116, 86, 140, 0.15);
+}
+
+/* ---------- All steps done ---------- */
+
+.ctl-done {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 226, 210, 0.7), rgba(228, 214, 250, 0.7));
+  border: 1px solid var(--ctl-line);
+  animation: ctl-nudge-in 0.5s ease-out;
+}
+
+.ctl-done-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.ctl-done .ctl-label {
+  margin: 0;
+}

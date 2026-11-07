@@ -13,6 +13,14 @@
   --dsk-lilac: #c8b4f5;
   --dsk-edge: linear-gradient(135deg, #ffc4a6 0%, #f5a3c7 50%, #c8b4f5 100%);
   --dsk-sans: "Figtree Variable", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+  /* Colours that light mode swaps (see the end of the file). */
+  --dsk-fill: #000; /* inside of each panel: black = no light */
+  --dsk-accent-grad: var(--dsk-edge); /* kicker text, progress fill */
+  --dsk-time-grad: linear-gradient(90deg, #f3e9ef, #cdbfc9);
+  --dsk-on: #b9e6c9; /* "on task" / "at desk" light */
+  --tree-trunk: #e6d6cf;
+  --tree-leaf-a: #ffc4a6;
+  --tree-leaf-b: #c8b4f5;
 
   position: fixed;
   inset: 0;
@@ -50,7 +58,7 @@
 .dsk-quote {
   grid-area: quote;
 }
-.dsk-parked {
+.dsk-treebox {
   grid-area: parked;
 }
 .dsk-status {
@@ -65,7 +73,7 @@
   border: clamp(2px, 0.2vw, 4px) solid transparent;
   border-radius: 2.4vw;
   background:
-    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--dsk-fill), var(--dsk-fill)) padding-box,
     var(--dsk-edge) border-box;
   padding: 2.6vh 1.8vw;
   box-shadow:
@@ -84,7 +92,7 @@
 .dsk-tone-nudge {
   border-width: clamp(3px, 0.32vw, 6px);
   background:
-    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--dsk-fill), var(--dsk-fill)) padding-box,
     linear-gradient(135deg, #ff7a7a, #ff3b4f 50%, #ff6a3d) border-box;
   animation: dsk-alarm 1.2s ease-in-out infinite;
 }
@@ -112,7 +120,7 @@
 
 .dsk-tone-break {
   background:
-    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--dsk-fill), var(--dsk-fill)) padding-box,
     linear-gradient(135deg, #e2d6ff, #c8b4f5 50%, #9fb7f0) border-box;
   box-shadow:
     0 0 1.4vw rgba(200, 180, 245, 0.3),
@@ -153,7 +161,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  background: var(--dsk-edge);
+  background: var(--dsk-accent-grad);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -244,7 +252,7 @@
   height: 100%;
   min-width: 0;
   border-radius: 999px;
-  background: var(--dsk-edge);
+  background: var(--dsk-accent-grad);
   box-shadow: 0 0 1vw rgba(245, 163, 199, 0.45);
   transition: width 0.9s cubic-bezier(0.34, 1.4, 0.64, 1); /* a little bounce when a step is done */
 }
@@ -285,7 +293,7 @@
 .dsk-timeline-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #f3e9ef, var(--dsk-soft));
+  background: var(--dsk-time-grad);
   transition: width 1s linear;
 }
 
@@ -434,29 +442,6 @@
   color: var(--dsk-soft);
 }
 
-/* ---------- Parked ---------- */
-
-.dsk-parked ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.8vh;
-  font-size: clamp(12px, 1.25vw, 26px);
-}
-
-.dsk-parked li {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dsk-parked li::before {
-  content: "· ";
-  color: var(--dsk-pink);
-}
-
 /* ---------- Status ---------- */
 
 .dsk-status-row {
@@ -490,7 +475,7 @@
 
 .dsk-led-relevant,
 .dsk-led-cam-present {
-  background: #b9e6c9;
+  background: var(--dsk-on);
   box-shadow: 0 0 0.7vw rgba(185, 230, 201, 0.6);
 }
 
@@ -564,4 +549,178 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---------- Focus tree ---------- */
+
+.dsk-treebox {
+  align-items: stretch;
+}
+
+.dsk-tree {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.dsk-tree svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: visible;
+}
+
+.dsk-tree-ground {
+  fill: none;
+  stroke: var(--dsk-faint);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.dsk-tree-trunk {
+  fill: none;
+  stroke: var(--tree-trunk);
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: d 1.5s ease;
+}
+
+.dsk-tree-branch {
+  fill: none;
+  stroke: var(--tree-trunk);
+  stroke-width: 3;
+  stroke-linecap: round;
+  animation: dsk-grow-in 1.2s ease-out;
+}
+
+/* A very faint fill makes the overlapping circles read as one leafy shape. */
+.dsk-tree-leaf {
+  fill: url(#tree-leaf);
+  fill-opacity: 0.1;
+  stroke: url(#tree-leaf);
+  stroke-width: 2.5;
+  transition: r 1.5s ease, cx 1.5s ease, cy 1.5s ease;
+  animation: dsk-grow-in 1.2s ease-out;
+}
+
+.dsk-tree-marble {
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 3px rgba(242, 135, 111, 0.55));
+  animation: dsk-marble-pop 0.9s cubic-bezier(0.34, 1.6, 0.64, 1);
+  transition: cx 1.5s ease, cy 1.5s ease;
+}
+
+/* A very slow, small sway: alive, not distracting. */
+.dsk-tree-sway {
+  transform-origin: 100px 205px;
+  animation: dsk-sway 9s ease-in-out infinite;
+}
+
+@keyframes dsk-sway {
+  0%,
+  100% {
+    transform: rotate(-1deg);
+  }
+  50% {
+    transform: rotate(1deg);
+  }
+}
+
+@keyframes dsk-grow-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dsk-marble-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+/* ---------- Parked list, shown once every step is done ---------- */
+
+.dsk-done-parked {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6vh;
+  animation: dsk-rise 0.8s ease-out;
+}
+
+.dsk-done-parked ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5vh 2vw;
+  font-size: clamp(12px, 1.3vw, 27px);
+}
+
+.dsk-done-parked li::before {
+  content: "· ";
+  color: var(--dsk-pink);
+}
+
+.dsk-done-parked-none {
+  margin: 0;
+}
+
+/* ---------- Light mode (for light-coloured desks) ----------
+   A projector can't make black, it can only leave light out. So on a light
+   desk, dark text needs a lit panel around it: each panel is filled with soft
+   light and the text is dark. Outside the panels (and the laptop zone) stays
+   unlit, so no light lands on the laptop or paper. */
+
+.dsk-theme-light {
+  --dsk-fill: #f6efec;
+  --dsk-ink: #261f28;
+  --dsk-soft: #6e6370;
+  --dsk-faint: #9d929f;
+  --dsk-accent-grad: linear-gradient(135deg, #d8623a 0%, #c44d86 50%, #7d55c7 100%);
+  --dsk-time-grad: linear-gradient(90deg, #8b8090, #4a4250);
+  --dsk-on: #2f9b5f;
+  --dsk-peach: #d8623a;
+  --dsk-pink: #c44d86;
+  --dsk-lilac: #7d55c7;
+  --tree-trunk: #6d4f45;
+  --tree-leaf-a: #d8623a;
+  --tree-leaf-b: #7d55c7;
+}
+
+.dsk-theme-light .dsk-panel {
+  box-shadow: 0 0 1.2vw rgba(245, 163, 199, 0.18);
+}
+
+.dsk-theme-light .dsk-laptop-zone {
+  border-color: #4a424d;
+}
+
+.dsk-theme-light .dsk-laptop-zone span {
+  color: #6e6370;
+}
+
+.dsk-theme-light .dsk-bar,
+.dsk-theme-light .dsk-timeline {
+  border-color: #b5aab6;
+}
+
+.dsk-theme-light .dsk-timeline {
+  background: #ebe2e0;
+}
+
+.dsk-theme-light .dsk-dot {
+  border-color: #9d929f;
+}
+
+.dsk-theme-light .dsk-dot-current {
+  border-color: var(--dsk-ink);
+}
+
+.dsk-theme-light .dsk-tone-nudge .dsk-kicker {
+  color: #d62839;
 }
