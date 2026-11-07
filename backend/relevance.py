@@ -37,8 +37,14 @@ def _prompt(goal: str, domain: str, title: str) -> str:
     return (
         f'A student\'s goal is: "{goal}"\n'
         f"They just opened a browser tab — site: {domain}, title: {title}\n"
-        "Does this tab fit the goal? Reply with exactly one word: "
-        "relevant, unrelated, or uncertain."
+        "Does this tab fit the goal? Reply with exactly one word:\n"
+        "- relevant: directly on-topic for the goal — official docs, tutorials, or "
+        "tools for the exact subject/technology named in the goal\n"
+        "- unrelated: clearly has nothing to do with the goal (social media, "
+        "entertainment, shopping, unrelated topics)\n"
+        "- uncertain: same general subject area but doesn't clearly match (wrong "
+        "language, wrong specific topic), or a general-purpose tool that could be "
+        "used for almost anything (an email inbox, a blank search page)"
     )
 
 
