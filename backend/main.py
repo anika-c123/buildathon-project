@@ -1,18 +1,17 @@
 """PLocked backend: the referee. See docs/CONTRACT.md for the full rules this follows.
 
-Phase 0 skeleton only — no session-state logic yet (that's Phase 1, task B1).
-/state always returns the idle example from shared/examples/session_update_idle.json.
+main.py is just the server (the four doors). The session-state rules live in
+session.py (B1).
 """
 
 import asyncio
-import json
 import time
-from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "shared" / "examples"
+from session import Session
+
 HEARTBEAT_SECONDS = 5
 
 app = FastAPI()
@@ -26,15 +25,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-def _load_example(filename: str) -> dict:
-    with open(EXAMPLES_DIR / filename) as f:
-        return json.load(f)["data"]
-
-
-# In-memory session snapshot. Phase 1 will replace this with real state
-# that changes as user_action / tab_change / camera_state messages arrive.
-state: dict = _load_example("session_update_idle.json")
+session = Session()
+connections: set[WebSocket] = set()
 
 
 def _now_ms() -> int:
@@ -45,6 +37,29 @@ def _envelope(msg_type: str, data: dict) -> dict:
     return {"v": 1, "source": "backend", "type": msg_type, "data": data, "timestamp": _now_ms()}
 
 
+async def broadcast(msg_type: str, data: dict) -> None:
+    """Pushes one message to every app connected over /ws right now."""
+    message = _envelope(msg_type, data)
+    dead = set()
+    for ws_conn in connections:
+        try:
+            await ws_conn.send_json(message)
+        except Exception:
+            dead.add(ws_conn)
+    connections.difference_update(dead)
+
+
+@app.on_event("startup")
+async def start_heartbeat() -> None:
+    asyncio.create_task(_heartbeat_loop())
+
+
+async def _heartbeat_loop() -> None:
+    while True:
+        await asyncio.sleep(HEARTBEAT_SECONDS)
+        await broadcast("session_update", session.snapshot())
+
+
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -52,7 +67,7 @@ def health():
 
 @app.get("/state")
 def get_state():
-    return state
+    return session.snapshot()
 
 
 @app.post("/event")
@@ -63,16 +78,30 @@ async def post_event(request: Request):
     if missing:
         raise HTTPException(status_code=400, detail=f"message is missing fields: {sorted(missing)}")
     print(f"[event] {message['source']} -> {message['type']}: {message['data']}")
+
+    if message["type"] == "user_action":
+        action = message["data"].get("action")
+        changed, extra = session.apply_action(action, message["data"])
+        if changed:
+            await broadcast("session_update", session.snapshot())
+        if extra:
+            extra_type, extra_data = extra
+            await broadcast(extra_type, extra_data)
+    # tab_change / camera_state are logged above only, for now — B2/B8/B9 will
+    # feed them into the session once relevance checking and vision exist.
+
     return {"ok": True}
 
 
 @app.websocket("/ws")
 async def ws(websocket: WebSocket):
     await websocket.accept()
-    await websocket.send_json(_envelope("session_update", state))
+    connections.add(websocket)
+    await websocket.send_json(_envelope("session_update", session.snapshot()))
     try:
         while True:
-            await asyncio.sleep(HEARTBEAT_SECONDS)
-            await websocket.send_json(_envelope("session_update", state))
+            await websocket.receive_text()  # the app never sends; this just waits for a disconnect
     except WebSocketDisconnect:
         pass
+    finally:
+        connections.discard(websocket)
