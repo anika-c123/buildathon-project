@@ -63,16 +63,84 @@ def run_demo(args):
         print("Stopped")
 
 
-def phone_close_to_hand(phone_box, hand_points, width, height):
+def finger_contact(phone_box, hands, width, height):
+    """Require multiple fingers near/inside phone, not just a nearby wrist.
+
+    Returns a heuristic contact candidate; 2-D landmarks cannot prove contact.
+    """
     x1, y1, x2, y2 = phone_box
-    threshold = max(35, 0.065 * math.hypot(width, height))
-    for x, y in hand_points:
-        if x <= 0 or y <= 0:
-            continue
-        nx, ny = min(max(x, x1), x2), min(max(y, y1), y2)
-        if math.hypot(x - nx, y - ny) < threshold:
+    margin = 0.018 * math.hypot(width, height)
+    for hand in hands:
+        # Thumb/index/middle/ring/pinky fingertips and base joints.
+        ids = (4, 8, 12, 16, 20, 5, 9, 13, 17)
+        close = sum(x1 - margin <= hand[i][0] <= x2 + margin and
+                    y1 - margin <= hand[i][1] <= y2 + margin for i in ids)
+        if close >= 2:
             return True
     return False
+
+
+class PresenceTracker:
+    """Allow short detector misses before proposing away.
+
+    Away is only meaningful with a calibrated camera view.
+    """
+    def __init__(self, absence_grace=2.0):
+        self.absence_grace = absence_grace
+        self.last_seen = None
+        self.started = None
+
+    def observe(self, person_or_hands, now, empty_means_away):
+        if self.started is None:
+            self.started = now
+        if person_or_hands:
+            self.last_seen = now
+            return "present"
+        if not empty_means_away:
+            return "unknown"
+        since = self.last_seen if self.last_seen is not None else self.started
+        return "away" if now - since >= self.absence_grace else "unknown"
+
+
+class PhoneHeldTracker:
+    """Latch a likely pickup while hand contact persists, even if phone stops moving.
+
+    Works best with a stationary camera and one phone. Movement alone never
+    indicates phone_in_hand; we also require multiple nearby hand landmarks.
+    """
+    def __init__(self, motion_fraction=0.018, motion_window=3.0,
+                 release_grace=1.0):
+        self.motion_fraction = motion_fraction
+        self.motion_window = motion_window
+        self.release_grace = release_grace
+        self.last_center = None
+        self.last_motion = float('-inf')
+        self.last_contact = None
+        self.held = False
+
+    def update(self, phones, hands, width, height, now):
+        if not phones:
+            self.last_center = None
+            if self.last_contact is None or now - self.last_contact >= self.release_grace:
+                self.held = False
+            return self.held, False
+
+        # Largest phone box is a simple single-phone assumption.
+        box = max(phones, key=lambda b: (b[2]-b[0])*(b[3]-b[1]))
+        center = ((box[0]+box[2])/2, (box[1]+box[3])/2)
+        diag = math.hypot(width, height)
+        if self.last_center is not None and math.dist(center, self.last_center) > self.motion_fraction * diag:
+            self.last_motion = now
+        self.last_center = center
+
+        contact = finger_contact(box, hands, width, height)
+        if contact:
+            self.last_contact = now
+            if now - self.last_motion <= self.motion_window:
+                self.held = True
+        elif self.last_contact is None or now - self.last_contact >= self.release_grace:
+            self.held = False
+        return self.held, contact
 
 
 class StableState:
@@ -131,8 +199,10 @@ def run_camera(args):
     latest = ("unknown", False, False)
     last_boxes = []
     last_points = []
-    last_phone_center = None
-    recent_phone_motion_at = float("-inf")
+    presence_tracker = PresenceTracker(args.absence_grace)
+    held_tracker = PhoneHeldTracker(motion_fraction=args.pickup_motion,
+                                   motion_window=args.motion_window,
+                                   release_grace=args.release_grace)
     frame_counter = 0
     failed_frames = 0
     print("Camera running. Press Q in preview or Ctrl+C in terminal to quit.")
@@ -169,43 +239,32 @@ def run_camera(args):
                 timestamp_ms = max(last_timestamp + 1, int((now - start_time) * 1000))
                 last_timestamp = timestamp_ms
                 result = landmarker.detect_for_video(mp_image, timestamp_ms)
+                hands = []
                 points = []
                 for landmarks in result.hand_landmarks:
-                    for idx in (0, 1, 4, 5, 8, 9, 12, 13, 17):
-                        p = landmarks[idx]
-                        points.append((p.x * width, p.y * height))
+                    hand = [(p.x * width, p.y * height) for p in landmarks]
+                    hands.append(hand)
+                    points.extend(hand)
 
-                # Approximation: a phone close to a hand is a *candidate* for holding.
-                # Motion gives extra evidence, but a stationary phone held in front of
-                # the camera can be missed. Desk-plane calibration would improve this.
-                near_hand = any(phone_close_to_hand(box, points, width, height)
-                                for box in phones)
-                if phones:
-                    # Use largest detected phone, roughly stable for single-phone setups.
-                    box = max(phones, key=lambda b: (b[2] - b[0]) * (b[3] - b[1]))
-                    center = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
-                    if last_phone_center is not None:
-                        motion = math.dist(center, last_phone_center)
-                        if motion > 0.025 * math.hypot(width, height):
-                            recent_phone_motion_at = now
-                    last_phone_center = center
-                else:
-                    last_phone_center = None
+                # E2: recently observed person/hands means present; short
+                # detector dropouts do not automatically imply away.
+                presence = presence_tracker.observe(
+                    people or bool(hands), now, args.empty_means_away
+                )
 
-                recently_moved = now - recent_phone_motion_at <= args.motion_window
-                # If motion is required, a near-hand stationary phone won't count.
-                likely_held = near_hand and (recently_moved or not args.require_motion)
-                if likely_held:
-                    raw_state = "phone_in_hand"
-                elif people or points:
-                    raw_state = "present"
-                else:
-                    # Only infer 'away' from an empty view if explicitly enabled:
-                    # hands can be out of view while someone is still at the desk.
-                    raw_state = "away" if args.empty_means_away else "unknown"
+                # E4: phone must move while at least two relevant hand
+                # landmarks are near it. After pickup, keep held while contact
+                # remains even if the phone itself becomes stationary.
+                held, near_hand = held_tracker.update(
+                    phones, hands, width, height, now
+                )
+                raw_state = "phone_in_hand" if held else presence
 
                 latest = (raw_state, bool(phones), near_hand)
                 last_boxes, last_points = phones, points
+                # Unknown is not a permitted contract event. Hold the last
+                # confirmed state during short uncertainty, but do not send
+                # new events if evidence is persistently unavailable.
                 changed = stable.update(raw_state, now)
                 if changed:
                     print(f"Confirmed after {args.hold_seconds:.1f}s: {stable.confirmed}")
@@ -254,18 +313,24 @@ def main():
     parser.add_argument("--interval", type=float, default=5.0, help="Heartbeat seconds (contract: 5)")
     parser.add_argument("--hold-seconds", type=float, default=2.0, help="Seconds to confirm any changed state")
     parser.add_argument("--every", type=int, default=5, help="Process each Nth frame")
-    parser.add_argument("--motion-window", type=float, default=1.2,
-                        help="Seconds recent phone movement still counts")
-    parser.add_argument("--require-motion", action="store_true",
-                        help="Require phone movement as well as hand proximity (more conservative)")
+    parser.add_argument("--motion-window", type=float, default=3.0,
+                        help="Seconds after a phone move that contact can count as pickup")
+    parser.add_argument("--pickup-motion", type=float, default=0.018,
+                        help="Phone movement threshold as fraction of frame diagonal")
+    parser.add_argument("--release-grace", type=float, default=1.0,
+                        help="Seconds of missing hand contact before releasing held state")
+    parser.add_argument("--absence-grace", type=float, default=2.0,
+                        help="Seconds with no person/hands before raw away can begin")
     parser.add_argument("--empty-means-away", action="store_true",
                         help="Treat empty frame as away; only for calibrated full-desk view")
     parser.add_argument("--verbose-backend", action="store_true")
     parser.add_argument("--no-window", action="store_true")
     parser.add_argument("--draw", action="store_true")
     args = parser.parse_args()
-    if args.every < 1 or args.interval <= 0 or args.hold_seconds < 0:
-        parser.error("--every >= 1, --interval > 0 and --hold-seconds >= 0 required")
+    if (args.every < 1 or args.interval <= 0 or args.hold_seconds < 0 or
+            args.motion_window <= 0 or args.pickup_motion <= 0 or
+            args.release_grace < 0 or args.absence_grace < 0):
+        parser.error("Invalid timing/motion options")
     if args.demo:
         run_demo(args)
     else:
