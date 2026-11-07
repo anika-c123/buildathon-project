@@ -331,14 +331,6 @@ function StudyingView({ data, connected, send, onEnd }) {
             <button type="button" className="ctl-btn ctl-btn-quiet" disabled={!connected} onClick={() => send("break")}>
               Break
             </button>
-            <button
-              type="button"
-              className="ctl-btn ctl-btn-quiet"
-              disabled={!connected}
-              onClick={() => send("relevant", { nudge_id: nudge.id })}
-            >
-              This is relevant
-            </button>
           </div>
         </div>
       )}

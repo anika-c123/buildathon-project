@@ -32,17 +32,17 @@
 }
 
 /* ---------- Layout ----------
-    [ Now (step)       ][ Progress ][ Quote + tree ]
-    [          Laptop space · no projection          ]
-   Panels only along the top; the whole bottom is left unlit for the
+    [ Now (step), the biggest ][ Progress ][ Quote + tree ]
+    [ laptop space (dotted), same left and right edges as the top row ]
+   Panels only along the top; the bottom ~two-thirds is left unlit for the
    laptop and paper. */
 
 .dsk-grid {
   position: absolute;
   inset: 3.5vh 2.6vw;
   display: grid;
-  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr) minmax(0, 1.4fr);
-  grid-template-rows: minmax(0, 1fr) minmax(0, 0.92fr);
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.95fr) minmax(0, 1.25fr);
+  grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.4fr);
   grid-template-areas:
     "now time quote"
     "laptop laptop laptop";
@@ -129,21 +129,24 @@
     inset 0 0 1.4vw rgba(200, 180, 245, 0.1);
 }
 
-/* Where the laptop and paper go: a thin outline, nothing projected inside. */
+/* Where the laptop and paper go: a dotted outline lined up with the panels
+   above (same left and right edges), nothing projected inside. The small
+   label sits in the bottom-left corner, out of the way. */
 .dsk-laptop-zone {
   grid-area: laptop;
-  justify-self: center;
-  width: 82%;
-  border: clamp(1px, 0.12vw, 2px) solid var(--dsk-faint);
-  border-radius: 2vw;
-  display: grid;
-  place-items: center;
+  border: clamp(2px, 0.18vw, 3px) dotted var(--dsk-faint);
+  border-radius: 2.4vw;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 2vh 1.8vw;
 }
 
 .dsk-laptop-zone span {
-  font-size: clamp(11px, 1.1vw, 22px);
-  letter-spacing: 0.04em;
-  color: var(--dsk-soft);
+  font-size: clamp(10px, 0.9vw, 19px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dsk-faint);
 }
 
 /* ---------- Type ---------- */

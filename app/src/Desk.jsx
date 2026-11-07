@@ -125,7 +125,7 @@ export default function Desk() {
           />
         )}
         <div className="dsk-laptop-zone" aria-hidden="true">
-          <span>Laptop space · no projection</span>
+          <span>Laptop space</span>
         </div>
       </div>
     </Screen>
@@ -160,7 +160,7 @@ function NowPanel({ data, steps, onBreak, breakLeft, breakOver, reentry, celebra
         <h1 className="dsk-big dsk-nudge-text" key={nudge.id}>
           {nudge.message}
         </h1>
-        <p className="dsk-hint">Answer on your laptop · Back to work · Break · This is relevant</p>
+        <p className="dsk-hint">Answer on your laptop · Back to work or Break</p>
       </Panel>
     );
   }

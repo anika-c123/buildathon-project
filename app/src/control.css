@@ -7,14 +7,16 @@
   --ctl-ink: #2a282f;
   --ctl-muted: #7a7581;
   --ctl-faint: #a9a3ae;
-  --ctl-line: rgba(255, 255, 255, 0.75);
-  --ctl-glass: rgba(255, 255, 255, 0.42);
-  --ctl-glass-strong: rgba(255, 255, 255, 0.72);
+  --ctl-line: rgba(255, 255, 255, 0.95);
+  --ctl-glass: rgba(255, 255, 255, 0.8); /* cards: much whiter than the page behind */
+  --ctl-glass-strong: #ffffff;
+  --ctl-inset: #f3eff6; /* soft tint for things inside a card (lists, stats, tracks) */
+  --ctl-edge: rgba(84, 62, 110, 0.12); /* thin outline for things inside a card */
   --ctl-accent: #ee7c4f;
   --ctl-accent-soft: rgba(238, 124, 79, 0.12);
   --ctl-lilac: #a98bd8;
   --ctl-orb: radial-gradient(circle at 32% 28%, #fff1e8 0%, #ffbf9f 22%, #f2876f 50%, #c9567a 78%, #8e5aa6 100%);
-  --ctl-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 18px 48px rgba(116, 86, 140, 0.12);
+  --ctl-shadow: 0 1px 0 #fff inset, 0 2px 6px rgba(84, 62, 110, 0.06), 0 22px 54px rgba(84, 62, 110, 0.2);
   --ctl-sans: "Figtree Variable", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -24,7 +26,7 @@
 
 body {
   margin: 0;
-  background: #ebe9ee; /* matches the page, so scrolling never shows a plain strip */
+  background: #d8d1df; /* matches the page, so scrolling never shows a plain strip */
 }
 
 .ctl-page {
@@ -33,12 +35,12 @@ body {
   font-family: var(--ctl-sans);
   font-size: 15px;
   line-height: 1.45;
-  padding: 28px 20px 56px;
+  padding: 28px clamp(16px, 3vw, 48px) 56px;
   background:
-    radial-gradient(60% 50% at 0% 100%, rgba(247, 199, 186, 0.75) 0%, transparent 70%),
-    radial-gradient(60% 60% at 100% 100%, rgba(205, 184, 240, 0.8) 0%, transparent 70%),
-    radial-gradient(50% 40% at 85% 10%, rgba(255, 255, 255, 0.9) 0%, transparent 70%),
-    #ebe9ee;
+    radial-gradient(60% 55% at 0% 100%, rgba(241, 166, 145, 0.85) 0%, transparent 70%),
+    radial-gradient(60% 65% at 100% 100%, rgba(166, 138, 226, 0.9) 0%, transparent 70%),
+    radial-gradient(45% 40% at 85% 5%, rgba(255, 255, 255, 0.55) 0%, transparent 70%),
+    #d8d1df;
   background-attachment: fixed;
   background-size: 100% 100vh; /* keep the blush/lavender glow covering the screen while scrolling */
 }
@@ -94,7 +96,7 @@ body {
 /* ---------- Header ---------- */
 
 .ctl-header {
-  max-width: 960px;
+  max-width: none;
   margin: 26px auto 20px;
   display: flex;
   align-items: center;
@@ -135,10 +137,10 @@ body {
 /* ---------- Layout: main card + side column ---------- */
 
 .ctl-layout {
-  max-width: 960px;
+  max-width: none;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
@@ -223,10 +225,10 @@ body {
   font: inherit;
   color: inherit;
   padding: 11px 18px;
-  border: 1px solid var(--ctl-line);
+  border: 1px solid var(--ctl-edge);
   border-radius: 999px;
   background: var(--ctl-glass-strong);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 2px 8px rgba(116, 86, 140, 0.06);
+  box-shadow: 0 1px 2px rgba(84, 62, 110, 0.06);
   min-width: 0;
   flex: 1;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
@@ -280,8 +282,8 @@ body {
 
 /* White glass pill, like the "Mindfulness" chip. */
 .ctl-btn-secondary {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: var(--ctl-line);
+  background: #fff;
+  border-color: var(--ctl-edge);
   color: var(--ctl-ink);
   box-shadow: 0 4px 14px rgba(116, 86, 140, 0.1);
 }
@@ -299,7 +301,7 @@ body {
 }
 
 .ctl-btn-quiet:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--ctl-inset);
 }
 
 /* Solid accent pill, for small confirm buttons. */
@@ -320,8 +322,8 @@ body {
   font-weight: 700;
   font-size: 15px;
   color: var(--ctl-ink);
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--ctl-line);
+  background: #fff;
+  border: 1px solid var(--ctl-edge);
   border-radius: 999px;
   padding: 7px 7px 7px 24px;
   display: flex;
@@ -399,8 +401,8 @@ body {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid var(--ctl-line);
+  background: var(--ctl-inset);
+  border: 1px solid var(--ctl-edge);
   color: var(--ctl-accent);
   font-size: 12px;
   font-weight: 700;
@@ -421,7 +423,7 @@ body {
 }
 
 .ctl-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--ctl-inset);
   color: var(--ctl-ink);
 }
 
@@ -563,8 +565,8 @@ body {
 .ctl-progress {
   height: 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid var(--ctl-line);
+  background: var(--ctl-inset);
+  border: 1px solid var(--ctl-edge);
   overflow: hidden;
 }
 
@@ -600,8 +602,8 @@ body {
 }
 
 .ctl-stat {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid var(--ctl-line);
+  background: var(--ctl-inset);
+  border: 1px solid var(--ctl-edge);
   border-radius: 22px;
   padding: 14px 10px;
   text-align: center;
@@ -632,7 +634,7 @@ body {
 
 code {
   font-size: 0.9em;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--ctl-inset);
   padding: 1px 7px;
   border-radius: 7px;
 }
@@ -714,8 +716,8 @@ code {
 
 .ctl-reentry {
   margin: 0;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid var(--ctl-line);
+  background: var(--ctl-inset);
+  border: 1px solid var(--ctl-edge);
   font-weight: 600;
   border-radius: 18px;
   padding: 10px 14px;
@@ -863,8 +865,8 @@ code {
   gap: 12px;
   padding: 10px 14px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid var(--ctl-line);
+  background: var(--ctl-inset);
+  border: 1px solid var(--ctl-edge);
   animation: ctl-nudge-in 0.4s ease-out;
 }
 
@@ -925,7 +927,7 @@ code {
   padding: 7px 14px;
   border-radius: 999px;
   background: var(--ctl-glass-strong);
-  border: 1px solid var(--ctl-line);
+  border: 1px solid var(--ctl-edge);
   white-space: nowrap;
 }
 
@@ -1010,13 +1012,13 @@ code {
   padding: 10px;
   border-radius: 20px;
   border: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--ctl-inset);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 
 .ctl-theme-choice:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: #fff;
 }
 
 .ctl-theme-choice.is-on {
@@ -1107,7 +1109,7 @@ code {
 .ctl-chip.is-on {
   background: #fff;
   color: var(--ctl-ink);
-  border-color: var(--ctl-line);
+  border-color: var(--ctl-edge);
   box-shadow: 0 4px 12px rgba(116, 86, 140, 0.1);
 }
 
