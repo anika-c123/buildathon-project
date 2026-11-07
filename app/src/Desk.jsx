@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
-import { onMessage, sendAction } from "./connection.js";
+import { onMessage } from "./connection.js";
 import "./desk.css";
 
-// The projector view (http://localhost:5173/desk), shown full-screen on the desk.
-// Built to be read from about a meter away on a low-resolution projector:
-// every size is relative to the screen (vw/vh), dark background, calm colours,
-// and no red anywhere (team rule: nudges are friendly, never alarming).
+// The desk view (http://localhost:5173/desk), projected onto the desk.
 //
-// Like the control screen, it never decides anything: it draws the latest
-// session_update and turns button presses into user_action messages.
+// DISPLAY ONLY: a projection can't be clicked, so there are no buttons here.
+// Every button (step done, break, park, nudge answers) lives on the laptop's
+// control screen. This page just draws the latest session_update as glowing
+// outlined panels on black (black = no light, so only the panels show up on
+// the desk), arranged around a dashed zone where the laptop sits.
 
 const REENTRY_SHOW_MS = 8000; // contract §5: show a welcome-back for about 8 seconds
 const CELEBRATE_MS = 1600;
@@ -45,6 +45,7 @@ function useBreakTime(data) {
     }
     if (onBreak && breakStart.current === null) {
       breakStart.current = Date.now();
+      force((n) => n + 1);
     } else if (!onBreak && breakStart.current !== null) {
       total.current += Date.now() - breakStart.current;
       breakStart.current = null;
@@ -55,10 +56,22 @@ function useBreakTime(data) {
   return (now) => total.current + (breakStart.current !== null ? now - breakStart.current : 0);
 }
 
+// Remembers when the current break began, so the break bar knows its full length.
+function useBreakLength(data) {
+  const began = useRef(null);
+  const endsAt = data?.break_ends_at ?? null;
+  if (!endsAt) began.current = null;
+  else if (began.current === null || began.current.endsAt !== endsAt) {
+    began.current = { at: Date.now(), endsAt };
+  }
+  return began.current ? Math.max(1, endsAt - began.current.at) : 1;
+}
+
 export default function Desk() {
   const { connected, data } = useSessionUpdate();
   const now = useNow();
   const breakTime = useBreakTime(data);
+  const breakLength = useBreakLength(data);
 
   // Welcome-back message, shown for 8 seconds.
   const [reentry, setReentry] = useState(null);
@@ -74,8 +87,7 @@ export default function Desk() {
     [],
   );
 
-  // Celebration: plays whenever the number of finished steps goes up,
-  // whether the button was pressed here or on the laptop.
+  // Celebration: plays whenever the number of finished steps goes up.
   const [celebration, setCelebration] = useState(null);
   const lastDone = useRef({ session: null, count: 0 });
   const steps = data?.steps ?? [];
@@ -98,98 +110,123 @@ export default function Desk() {
   if (!connected || !data) {
     return (
       <Screen>
-        <div className="dsk-center dsk-quiet">
-          <span className="dsk-pulse" aria-hidden="true" />
-          <p className="dsk-idle-line">Connecting…</p>
+        <div className="dsk-solo">
+          <Panel className="dsk-solo-panel">
+            <span className="dsk-pulse" aria-hidden="true" />
+            <p className="dsk-solo-line">Connecting…</p>
+          </Panel>
         </div>
       </Screen>
     );
   }
 
-  if (data.status !== "studying" && data.status !== "break") {
+  const inSession = data.status === "studying" || data.status === "break";
+  if (!inSession) {
     return (
       <Screen>
-        <div className="dsk-center dsk-quiet">
-          <p className="dsk-brand">PLocked</p>
-          <p className="dsk-idle-line">Start a session on the laptop to begin.</p>
+        <div className="dsk-solo">
+          <Panel className="dsk-solo-panel">
+            <p className="dsk-brand">PLocked</p>
+            <p className="dsk-solo-line">Start a session on the laptop.</p>
+          </Panel>
         </div>
       </Screen>
     );
   }
 
+  const onBreak = data.status === "break";
   const total = Math.max(1, (data.ends_at ?? 0) - (data.started_at ?? 0));
   const focusedMs = Math.max(0, now - data.started_at - breakTime(now));
-  const timeLeft = Math.min(1, Math.max(0, 1 - focusedMs / total));
-
-  if (data.status === "break") {
-    return (
-      <Screen>
-        <BreakScreen data={data} now={now} />
-        <TimeBar fraction={timeLeft} paused />
-        <Parked items={data.parked} />
-      </Screen>
-    );
-  }
-
-  const i = data.current_step;
-  const allDone = steps.length > 0 && i === -1;
-  const nudge = data.active_nudge;
+  const timeLeft = clamp01(1 - focusedMs / total);
+  const breakLeft = data.break_ends_at ? clamp01((data.break_ends_at - now) / breakLength) : 0;
 
   return (
     <Screen>
-      <header className="dsk-top">
-        <p className="dsk-goal">{data.goal}</p>
-        <ParkButton />
-      </header>
-
-      {reentry && (
-        <div className="dsk-reentry" key={reentry.key} role="status">
-          {reentry.text}
+      <div className="dsk-grid">
+        <NowPanel
+          data={data}
+          steps={steps}
+          onBreak={onBreak}
+          breakLeft={breakLeft}
+          breakOver={data.break_ends_at && now >= data.break_ends_at}
+          reentry={reentry}
+          celebration={celebration}
+        />
+        <TimePanel timeLeft={timeLeft} onBreak={onBreak} goal={data.goal} />
+        <ParkedPanel items={data.parked} />
+        <div className="dsk-laptop-zone" aria-hidden="true">
+          <span>laptop</span>
         </div>
-      )}
-
-      <main className="dsk-main">
-        {allDone ? (
-          <>
-            <p className="dsk-kicker">All {steps.length} steps done</p>
-            <h1 className="dsk-step">Nice work. Wrap up on the laptop when you're ready.</h1>
-          </>
-        ) : (
-          <>
-            <p className="dsk-kicker">
-              Step {i + 1} of {steps.length}
-            </p>
-            <h1 className="dsk-step" key={i}>
-              {steps[i]?.text}
-            </h1>
-          </>
-        )}
-
-        <Dots steps={steps} current={i} celebrating={celebration !== null} />
-
-        {!allDone && (
-          <div className="dsk-done-wrap">
-            <button type="button" className="dsk-btn dsk-btn-done" onClick={() => sendAction("step_done")}>
-              ✓ Step done
-            </button>
-            {celebration && <Celebration key={celebration} />}
-          </div>
-        )}
-      </main>
-
-      <Parked items={data.parked} />
-      <TimeBar fraction={timeLeft} />
-
-      {nudge && <NudgeCard nudge={nudge} />}
+        <StatusPanel activity={data.activity} camera={data.camera} />
+      </div>
     </Screen>
   );
+}
+
+function clamp01(x) {
+  return Math.min(1, Math.max(0, x));
 }
 
 function Screen({ children }) {
   return <div className="dsk-screen">{children}</div>;
 }
 
-// ---------- Pieces ----------
+function Panel({ className = "", tone = "", children }) {
+  return <section className={`dsk-panel ${tone ? `dsk-tone-${tone}` : ""} ${className}`}>{children}</section>;
+}
+
+// ---------- Now: the big panel (step, nudge, break, welcome back) ----------
+
+function NowPanel({ data, steps, onBreak, breakLeft, breakOver, reentry, celebration }) {
+  const nudge = data.active_nudge;
+  const i = data.current_step;
+  const allDone = steps.length > 0 && i === -1;
+
+  if (nudge) {
+    return (
+      <Panel className="dsk-now" tone="nudge">
+        <p className="dsk-kicker">A gentle nudge</p>
+        <h1 className="dsk-big dsk-nudge-text" key={nudge.id}>
+          {nudge.message}
+        </h1>
+        <p className="dsk-hint">Answer on your laptop · Back to work · Break · This is relevant</p>
+      </Panel>
+    );
+  }
+
+  if (onBreak) {
+    const next = steps[i]?.text;
+    return (
+      <Panel className="dsk-now" tone="break">
+        <p className="dsk-kicker">On a break</p>
+        <h1 className="dsk-big">{breakOver ? "Ready when you are." : "Stretch, breathe, get some water."}</h1>
+        <div className="dsk-bar dsk-bar-break" aria-hidden="true">
+          <div className="dsk-bar-fill" style={{ width: `${breakLeft * 100}%` }} />
+        </div>
+        {next && <p className="dsk-hint">Up next: {next}</p>}
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel className="dsk-now" tone={reentry ? "welcome" : ""}>
+      {reentry ? (
+        <p className="dsk-kicker dsk-welcome" key={reentry.key}>
+          {reentry.text}
+        </p>
+      ) : (
+        <p className="dsk-kicker">{allDone ? `All ${steps.length} steps done` : `Step ${i + 1} of ${steps.length}`}</p>
+      )}
+      <h1 className="dsk-big" key={i}>
+        {allDone ? "Nice work. Wrap up on the laptop." : steps[i]?.text}
+      </h1>
+      <div className="dsk-dots-row">
+        <Dots steps={steps} current={i} celebrating={celebration !== null} />
+        {celebration && <Celebration key={celebration} />}
+      </div>
+    </Panel>
+  );
+}
 
 function Dots({ steps, current, celebrating }) {
   return (
@@ -197,7 +234,8 @@ function Dots({ steps, current, celebrating }) {
       {steps.map((step, j) => {
         const state = step.done ? "done" : j === current ? "current" : "todo";
         // The dot that just turned "done" (the one before the current step) pops.
-        const justDone = celebrating && step.done && (j === current - 1 || (current === -1 && j === steps.length - 1));
+        const justDone =
+          celebrating && step.done && (j === current - 1 || (current === -1 && j === steps.length - 1));
         return (
           <li
             key={j}
@@ -210,18 +248,8 @@ function Dots({ steps, current, celebrating }) {
   );
 }
 
-// A shrinking bar along the bottom edge: full at the start, empty at the end.
-// No numbers on purpose: calm, never a stressful countdown.
-function TimeBar({ fraction, paused = false }) {
-  return (
-    <div className={`dsk-timebar ${paused ? "is-paused" : ""}`} aria-hidden="true">
-      <div className="dsk-timebar-fill" style={{ width: `${fraction * 100}%` }} />
-    </div>
-  );
-}
-
 function Celebration() {
-  // A small burst of dots from the button, plus a short "Nice!" that floats up.
+  // A small burst of sparks from the dots, plus a short "Nice!".
   const sparks = Array.from({ length: 12 }, (_, k) => k);
   return (
     <div className="dsk-celebrate" aria-hidden="true">
@@ -233,141 +261,72 @@ function Celebration() {
   );
 }
 
-function NudgeCard({ nudge }) {
-  const [sending, setSending] = useState(false);
-  async function press(action, fields) {
-    setSending(true);
-    await sendAction(action, fields);
-    setSending(false);
-  }
+// ---------- Time: shrinking bar, no numbers ----------
+
+function TimePanel({ timeLeft, onBreak, goal }) {
   return (
-    <div className="dsk-nudge-backdrop">
-      <div className="dsk-nudge" role="dialog" aria-live="polite" aria-label="Nudge">
-        <p className="dsk-nudge-text">{nudge.message}</p>
-        <div className="dsk-nudge-buttons">
-          <button
-            type="button"
-            className="dsk-btn dsk-btn-primary"
-            disabled={sending}
-            onClick={() => press("dismiss", { nudge_id: nudge.id })}
-          >
-            Back to work
-            <Arrow />
-          </button>
-          <button type="button" className="dsk-btn" disabled={sending} onClick={() => press("break")}>
-            Break
-          </button>
-          <button
-            type="button"
-            className="dsk-btn"
-            disabled={sending}
-            onClick={() => press("relevant", { nudge_id: nudge.id })}
-          >
-            This is relevant
-          </button>
-        </div>
+    <Panel className="dsk-time">
+      <p className="dsk-label">{onBreak ? "Session · paused" : "Session"}</p>
+      <p className="dsk-goal">{goal}</p>
+      <div className={`dsk-bar ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
+        <div className="dsk-bar-fill" style={{ width: `${timeLeft * 100}%` }} />
       </div>
-    </div>
+    </Panel>
   );
 }
 
-function BreakScreen({ data, now }) {
-  // The break bar shrinks until break_ends_at. We remember when the break began
-  // so we know the full length of the bar.
-  const breakBegan = useRef(null);
-  const endsAt = data.break_ends_at;
-  if (breakBegan.current === null || breakBegan.current.endsAt !== endsAt) {
-    breakBegan.current = { at: Date.now(), endsAt };
-  }
-  const length = Math.max(1, (endsAt ?? 0) - breakBegan.current.at);
-  const left = endsAt ? Math.min(1, Math.max(0, (endsAt - now) / length)) : 0;
-  const over = endsAt && now >= endsAt;
+// ---------- Parked thoughts ----------
 
-  const i = data.current_step;
-  const next = data.steps?.[i]?.text;
-
+function ParkedPanel({ items }) {
+  const list = items ?? [];
   return (
-    <main className="dsk-break">
-      <p className="dsk-kicker dsk-kicker-break">On a break</p>
-      <h1 className="dsk-step dsk-break-title">{over ? "Ready when you are." : "Stretch, breathe, get some water."}</h1>
-      {endsAt && (
-        <div className="dsk-breakbar" aria-hidden="true">
-          <div className="dsk-breakbar-fill" style={{ width: `${left * 100}%` }} />
-        </div>
+    <Panel className="dsk-parked">
+      <p className="dsk-label">Parked for later</p>
+      {list.length === 0 ? (
+        <p className="dsk-quiet">Nothing yet</p>
+      ) : (
+        <ul>
+          {list.slice(-3).map((item, k) => (
+            <li key={`${item.timestamp}-${k}`}>{item.text}</li>
+          ))}
+        </ul>
       )}
-      {next && <p className="dsk-break-next">Up next: {next}</p>}
-      <button type="button" className="dsk-btn dsk-btn-primary dsk-btn-big" onClick={() => sendAction("resume")}>
-        I'm back
-        <Arrow />
-      </button>
-    </main>
+    </Panel>
   );
 }
 
-function ParkButton() {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
-  const [saved, setSaved] = useState(false);
+// ---------- Status: what PLocked currently sees ----------
 
-  async function park(e) {
-    e.preventDefault();
-    const thought = text.trim();
-    if (!thought) return;
-    const result = await sendAction("park", { text: thought });
-    if (result.ok) {
-      setText("");
-      setOpen(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
-    }
-  }
+const ACTIVITY_WORDS = {
+  relevant: "on task",
+  unrelated: "off task",
+  uncertain: "not sure",
+  unknown: "—",
+};
 
-  if (!open) {
-    return (
-      <button type="button" className="dsk-park-btn" onClick={() => setOpen(true)}>
-        {saved ? "Parked ✓" : "+ Park a thought"}
-      </button>
-    );
-  }
+const CAMERA_WORDS = {
+  present: "at desk",
+  away: "away",
+  phone_in_hand: "phone in hand",
+  unknown: "off",
+};
+
+function StatusPanel({ activity, camera }) {
+  const label = activity?.label ?? "unknown";
+  const cam = camera?.state ?? "unknown";
   return (
-    <form className="dsk-park-form" onSubmit={park}>
-      <input
-        className="dsk-park-input"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-        placeholder="Something to do later…"
-        aria-label="Thought to park for later"
-        autoFocus
-      />
-      <button type="submit" className="dsk-park-btn">
-        Park
-      </button>
-    </form>
-  );
-}
-
-function Parked({ items }) {
-  if (!items?.length) return null;
-  return (
-    <aside className="dsk-parked">
-      <p className="dsk-parked-title">Parked for later</p>
-      <ul>
-        {items.slice(-4).map((item, k) => (
-          <li key={`${item.timestamp}-${k}`}>{item.text}</li>
-        ))}
-      </ul>
-    </aside>
-  );
-}
-
-// Right arrow in a dark circle, at the end of the main lime pill buttons.
-function Arrow() {
-  return (
-    <span className="dsk-arrow" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
-        <path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
+    <Panel className="dsk-status">
+      <p className="dsk-label">PLocked sees</p>
+      <div className="dsk-status-row">
+        <span className={`dsk-led dsk-led-${label}`} aria-hidden="true" />
+        <span className="dsk-status-name">{activity?.domain ?? "no site yet"}</span>
+        <span className="dsk-status-word">{ACTIVITY_WORDS[label] ?? label}</span>
+      </div>
+      <div className="dsk-status-row">
+        <span className={`dsk-led dsk-led-cam-${cam}`} aria-hidden="true" />
+        <span className="dsk-status-name">camera</span>
+        <span className="dsk-status-word">{CAMERA_WORDS[cam] ?? cam}</span>
+      </div>
+    </Panel>
   );
 }

@@ -6,7 +6,8 @@ import "./control.css";
 // The laptop control screen (http://localhost:5173/).
 // It shows one of three views, picked from what the backend last said:
 //   1. Setup    — no session: type a goal, get/edit steps, start.
-//   2. Studying — a session is running (or on a break): progress + End session.
+//   2. Studying — a session is running (or on a break): progress and every
+//                 session button (step done, break, park, nudge answers).
 //   3. Summary  — the session just ended: the backend's summary message.
 // The screen never decides anything about the session itself (docs/CONTRACT.md):
 // it sends button presses as user_action messages and draws what comes back.
@@ -99,7 +100,7 @@ export default function Control() {
   if (!data) {
     view = <p className="ctl-muted ctl-center">Waiting for the backend…</p>;
   } else if (inSession) {
-    view = <StudyingView data={data} connected={connected} onEnd={endSession} />;
+    view = <StudyingView data={data} connected={connected} send={send} onEnd={endSession} />;
   } else if (summary) {
     view = <SummaryView summary={summary} onNewSession={() => setSummary(null)} />;
   } else {
@@ -272,14 +273,66 @@ function SetupView({
 }
 
 // ---------- 2. Studying ----------
+// All the session buttons live here, because the desk view is a projection
+// and can't be clicked.
 
-function StudyingView({ data, connected, onEnd }) {
+const REENTRY_SHOW_MS = 8000;
+
+function StudyingView({ data, connected, send, onEnd }) {
   const steps = data.steps ?? [];
   const doneCount = steps.filter((s) => s.done).length;
   const onBreak = data.status === "break";
+  const allDone = steps.length > 0 && data.current_step === -1;
+  const nudge = data.active_nudge;
+
+  // Same welcome-back message the desk shows, for 8 seconds.
+  const [reentry, setReentry] = useState(null);
+  useEffect(() => {
+    let timer;
+    const stop = onMessage((message) => {
+      if (message.type !== "reentry") return;
+      setReentry(message.data?.message ?? "Welcome back!");
+      clearTimeout(timer);
+      timer = setTimeout(() => setReentry(null), REENTRY_SHOW_MS);
+    });
+    return () => {
+      stop();
+      clearTimeout(timer);
+    };
+  }, []);
 
   return (
     <div className="ctl-studying">
+      {nudge && (
+        <div className="ctl-nudge" role="alert">
+          <p className="ctl-nudge-text">{nudge.message}</p>
+          <div className="ctl-nudge-buttons">
+            <button
+              type="button"
+              className="ctl-cta ctl-cta-small"
+              disabled={!connected}
+              onClick={() => send("dismiss", { nudge_id: nudge.id })}
+            >
+              <span>Back to work</span>
+              <Arrow />
+            </button>
+            <button type="button" className="ctl-btn ctl-btn-quiet" disabled={!connected} onClick={() => send("break")}>
+              Break
+            </button>
+            <button
+              type="button"
+              className="ctl-btn ctl-btn-quiet"
+              disabled={!connected}
+              onClick={() => send("relevant", { nudge_id: nudge.id })}
+            >
+              This is relevant
+            </button>
+          </div>
+        </div>
+      )}
+
+      {reentry && !nudge && <p className="ctl-reentry">{reentry}</p>}
+
       <p className="ctl-status">
         <span className={`ctl-dot ${onBreak ? "ctl-dot-break" : ""}`} aria-hidden="true" />
         {onBreak ? "On a break" : "Studying"}
@@ -297,21 +350,74 @@ function StudyingView({ data, connected, onEnd }) {
       </div>
       <ol className="ctl-step-status">
         {steps.map((step, i) => (
-          <li
-            key={i}
-            className={step.done ? "is-done" : i === data.current_step ? "is-current" : ""}
-          >
+          <li key={i} className={step.done ? "is-done" : i === data.current_step ? "is-current" : ""}>
             {step.text}
           </li>
         ))}
       </ol>
-      <p className="ctl-muted ctl-small">
-        The desk view is at <code>localhost:5173/desk</code>. Drag it onto the projector and go full screen.
-      </p>
-      <button type="button" className="ctl-btn ctl-btn-quiet" onClick={onEnd} disabled={!connected}>
-        End session <Arrow small />
-      </button>
+
+      <div className="ctl-actions">
+        {onBreak ? (
+          <button type="button" className="ctl-cta" disabled={!connected} onClick={() => send("resume")}>
+            <span>I'm back</span>
+            <Arrow />
+          </button>
+        ) : (
+          !allDone && (
+            <button type="button" className="ctl-cta" disabled={!connected} onClick={() => send("step_done")}>
+              <span>Step done</span>
+              <Arrow />
+            </button>
+          )
+        )}
+        {!onBreak && (
+          <button type="button" className="ctl-btn ctl-btn-secondary" disabled={!connected} onClick={() => send("break")}>
+            Take a break
+          </button>
+        )}
+      </div>
+
+      <ParkBox connected={connected} send={send} />
+
+      <div className="ctl-footer">
+        <p className="ctl-muted ctl-small">
+          Projector view: <code>localhost:5173/desk</code>, full screen on the projector.
+        </p>
+        <button type="button" className="ctl-btn ctl-btn-quiet" onClick={onEnd} disabled={!connected}>
+          End session <Arrow small />
+        </button>
+      </div>
     </div>
+  );
+}
+
+// One-line "park a thought": type it, press Enter, it shows on the desk.
+function ParkBox({ connected, send }) {
+  const [text, setText] = useState("");
+  const [saved, setSaved] = useState(false);
+  async function park(e) {
+    e.preventDefault();
+    const thought = text.trim();
+    if (!thought) return;
+    if (await send("park", { text: thought })) {
+      setText("");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    }
+  }
+  return (
+    <form className="ctl-park" onSubmit={park}>
+      <input
+        className="ctl-input"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Park a thought for later…"
+        aria-label="Park a thought for later"
+      />
+      <button type="submit" className="ctl-btn ctl-btn-secondary" disabled={!connected || !text.trim()}>
+        {saved ? "Parked ✓" : "Park"}
+      </button>
+    </form>
   );
 }
 
