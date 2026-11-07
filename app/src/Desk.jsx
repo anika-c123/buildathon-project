@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage } from "./connection.js";
-import { useQuote } from "./quotes.js";
+import { useQuote, useQuoteRotation } from "./quotes.js";
 import { useSessionTime } from "./timer.js";
 import "./desk.css";
 
@@ -31,6 +31,7 @@ function useBreakLength(data) {
 export default function Desk() {
   const { connected, data } = useSessionUpdate();
   const time = useSessionTime(data);
+  useQuoteRotation(data); // new quote each session and every 30 minutes
   const now = time.now;
   const breakLength = useBreakLength(data);
 

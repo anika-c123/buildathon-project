@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage, sendAction } from "./connection.js";
-import { addQuote, nextQuote, useQuote } from "./quotes.js";
+import { addQuote, nextQuote, useQuote, useQuoteRotation } from "./quotes.js";
 import { useSessionTime } from "./timer.js";
 import "./control.css";
 
@@ -18,6 +18,7 @@ const PLAN_TIMEOUT_MS = 15000; // stop the "Thinking…" spinner if no steps com
 
 export default function Control() {
   const { connected, data } = useSessionUpdate();
+  useQuoteRotation(data); // new quote each session and every 30 minutes
 
   // Form fields live here (not inside the Setup view) so nothing you've typed
   // is lost if the backend restarts or you come back from the summary.

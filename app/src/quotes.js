@@ -100,3 +100,36 @@ export function useQuote() {
 
   return quote ?? FALLBACK;
 }
+
+// ---------- Automatic refresh ----------
+// A fresh random quote when a new session starts, and again every 30 minutes
+// of the session (at 30, 60, 90 … minutes). "New quote" still works any time.
+//
+// Both the laptop and the desk call this, so it works with either one open.
+// To stop the two tabs both changing the quote at the same moment, each change
+// is recorded as "session start time : which half-hour" in localStorage, and a
+// tab only changes the quote if that half-hour hasn't been handled yet.
+
+const ROTATION_KEY = "plocked.quoteRotation";
+const ROTATE_EVERY_MS = 30 * 60 * 1000;
+
+export function useQuoteRotation(data) {
+  const startedAt = data?.started_at ?? null;
+  const inSession = data?.status === "studying" || data?.status === "break";
+
+  useEffect(() => {
+    if (!inSession || !startedAt) return undefined;
+
+    function check() {
+      const halfHour = Math.floor(Math.max(0, Date.now() - startedAt) / ROTATE_EVERY_MS);
+      const key = `${startedAt}:${halfHour}`;
+      if (read(ROTATION_KEY, null) === key) return; // already changed for this half-hour
+      write(ROTATION_KEY, key);
+      nextQuote();
+    }
+
+    check();
+    const id = setInterval(check, 15 * 1000); // look every 15 s; it only acts at a new half-hour
+    return () => clearInterval(id);
+  }, [inSession, startedAt]);
+}
