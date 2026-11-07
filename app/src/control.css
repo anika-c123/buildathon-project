@@ -679,17 +679,25 @@ code {
   height: 32px;
 }
 
-/* Nudge: a warm glass card that slides in at the top. */
+/* Nudge: a red-tinted glass card with a pulsing red edge, so it's hard to miss. */
 .ctl-nudge {
-  background: linear-gradient(135deg, rgba(255, 214, 196, 0.85), rgba(240, 196, 222, 0.8));
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, rgba(255, 205, 205, 0.92), rgba(255, 178, 190, 0.88));
+  border: 2px solid #ff4d5e;
   border-radius: 26px;
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 12px 30px rgba(226, 112, 139, 0.2);
-  animation: ctl-nudge-in 0.5s ease-out;
+  box-shadow: 0 12px 30px rgba(255, 59, 79, 0.25);
+  animation:
+    ctl-nudge-in 0.5s ease-out,
+    ctl-alarm 1.2s ease-in-out infinite;
+}
+
+@keyframes ctl-alarm {
+  50% {
+    box-shadow: 0 12px 40px rgba(255, 59, 79, 0.5), 0 0 0 6px rgba(255, 77, 94, 0.18);
+  }
 }
 
 @keyframes ctl-nudge-in {
@@ -820,4 +828,21 @@ code {
   .ctl-headline {
     font-size: 25px;
   }
+}
+
+/* Progress line: "2 of 4 steps done" on the left, "40 min left" on the right. */
+.ctl-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.ctl-time-left {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ctl-time-left.is-out {
+  color: var(--ctl-accent);
 }

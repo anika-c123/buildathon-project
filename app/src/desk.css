@@ -24,20 +24,21 @@
 }
 
 /* ---------- Layout ---------- */
-/*  [ Now (step)       ][ Session ][ Quote  ]
-    [ Parked ][ laptop zone       ][ Status ]
-    Both rows the same height: the laptop zone is the same size as Now. */
+/*  [ Now (step)       ][ Progress ][ Quote ]
+    [ Parked ][     laptop zone     ][ Status]
+    The bottom row is taller and the middle columns wider, so the laptop
+    zone has room for the laptop AND paper/notebook. */
 
 .dsk-grid {
   position: absolute;
-  inset: 4vh 3vw;
+  inset: 3.5vh 2.6vw;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr) minmax(0, 1.18fr) minmax(0, 0.82fr);
+  grid-template-rows: minmax(0, 0.78fr) minmax(0, 1.42fr);
   grid-template-areas:
     "now now time quote"
     "parked laptop laptop status";
-  gap: 2vw;
+  gap: 1.6vw;
 }
 
 .dsk-now {
@@ -66,7 +67,7 @@
   background:
     linear-gradient(#000, #000) padding-box,
     var(--dsk-edge) border-box;
-  padding: 3vh 2vw;
+  padding: 2.6vh 1.8vw;
   box-shadow:
     0 0 1.4vw rgba(245, 163, 199, 0.22),
     inset 0 0 1.6vw rgba(200, 180, 245, 0.1);
@@ -78,25 +79,35 @@
   overflow: hidden;
 }
 
+/* Nudge: the box turns red and pulses so it's hard to miss. Only the
+   OUTLINE is red; the inside stays black so the desk isn't flooded red. */
 .dsk-tone-nudge {
+  border-width: clamp(3px, 0.32vw, 6px);
   background:
     linear-gradient(#000, #000) padding-box,
-    linear-gradient(135deg, #ffd0b8, #ffb08c 45%, #f5a3c7) border-box;
-  animation: dsk-breathe 3s ease-in-out infinite;
+    linear-gradient(135deg, #ff7a7a, #ff3b4f 50%, #ff6a3d) border-box;
+  animation: dsk-alarm 1.2s ease-in-out infinite;
 }
 
-@keyframes dsk-breathe {
+@keyframes dsk-alarm {
   0%,
   100% {
     box-shadow:
-      0 0 1.4vw rgba(255, 176, 140, 0.3),
-      inset 0 0 1.4vw rgba(255, 176, 140, 0.1);
+      0 0 1.4vw rgba(255, 59, 79, 0.45),
+      inset 0 0 1.4vw rgba(255, 59, 79, 0.15);
   }
   50% {
     box-shadow:
-      0 0 3vw rgba(255, 176, 140, 0.55),
-      inset 0 0 2vw rgba(255, 176, 140, 0.18);
+      0 0 3.6vw rgba(255, 59, 79, 0.85),
+      inset 0 0 2.4vw rgba(255, 59, 79, 0.3);
   }
+}
+
+.dsk-tone-nudge .dsk-kicker {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: #ff6b74;
 }
 
 .dsk-tone-break {
@@ -148,6 +159,29 @@
   color: transparent;
 }
 
+.dsk-now-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5vw;
+  min-width: 0;
+}
+
+.dsk-now-head .dsk-kicker {
+  flex: none;
+}
+
+.dsk-now-goal {
+  margin: 0;
+  min-width: 0;
+  font-size: clamp(11px, 1.1vw, 23px);
+  font-weight: 500;
+  color: var(--dsk-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .dsk-welcome {
   text-transform: none;
   letter-spacing: 0;
@@ -194,22 +228,16 @@
   }
 }
 
-/* ---------- Bars ----------
-   Thick bar = steps done (fills like the laptop's progress bar).
-   Thin line under it = session time, shrinking, no numbers. */
-
-.dsk-progress-block {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1vh;
-}
+/* ---------- Progress + time ----------
+   Thick bar = steps done. "40 min left" = time in calm 10-minute steps.
+   The bar under it = the detailed time left, sliding down smoothly. */
 
 .dsk-bar {
-  height: clamp(16px, 3.4vh, 38px);
+  height: clamp(14px, 3vh, 34px);
   border-radius: 999px;
   border: 2px solid var(--dsk-faint);
   padding: 3px;
+  flex: none;
 }
 
 .dsk-bar-fill {
@@ -221,18 +249,46 @@
   transition: width 0.9s cubic-bezier(0.34, 1.4, 0.64, 1); /* a little bounce when a step is done */
 }
 
+.dsk-clock {
+  margin-top: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.8vw;
+}
+
+.dsk-time-left {
+  margin: 0;
+  font-size: clamp(16px, 2vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  animation: dsk-rise 0.6s ease-out;
+}
+
+.dsk-time-left.is-out {
+  color: var(--dsk-peach);
+}
+
+.dsk-paused {
+  font-size: clamp(10px, 0.95vw, 20px);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dsk-lilac);
+}
+
 .dsk-timeline {
-  height: clamp(3px, 0.5vh, 6px);
+  height: clamp(9px, 1.7vh, 20px);
   border-radius: 999px;
-  background: #1c171d;
-  overflow: hidden;
+  border: 2px solid var(--dsk-faint);
+  padding: 2px;
+  flex: none;
 }
 
 .dsk-timeline-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--dsk-soft);
-  opacity: 0.7;
+  background: linear-gradient(90deg, #f3e9ef, var(--dsk-soft));
   transition: width 1s linear;
 }
 
@@ -240,17 +296,10 @@
   background: var(--dsk-lilac);
 }
 
-.dsk-timeline-label {
-  margin: 0;
-  font-size: clamp(9px, 0.85vw, 18px);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--dsk-faint);
-}
-
 /* The break bar inside the Now panel. */
 .dsk-bar-break {
   width: 70%;
+  margin-top: 0;
 }
 
 .dsk-bar-break .dsk-bar-fill {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage, sendAction } from "./connection.js";
 import { addQuote, nextQuote, useQuote } from "./quotes.js";
+import { useSessionTime } from "./timer.js";
 import "./control.css";
 
 // The laptop control screen (http://localhost:5173/).
@@ -290,6 +291,7 @@ function StudyingView({ data, connected, send, onEnd }) {
   const onBreak = data.status === "break";
   const allDone = steps.length > 0 && data.current_step === -1;
   const nudge = data.active_nudge;
+  const time = useSessionTime(data); // same "40 min left" as the desk
 
   // Same welcome-back message the desk shows, for 8 seconds.
   const [reentry, setReentry] = useState(null);
@@ -345,9 +347,15 @@ function StudyingView({ data, connected, send, onEnd }) {
         {data.demo_mode && <span className="ctl-tag">demo mode</span>}
       </p>
       <h1 className="ctl-goal-title">{data.goal}</h1>
-      <p className="ctl-muted">
-        {doneCount} of {steps.length} steps done
-      </p>
+      <div className="ctl-meta">
+        <span className="ctl-muted">
+          {doneCount} of {steps.length} steps done
+        </span>
+        <span className={`ctl-time-left ${time.remainingMs <= 0 ? "is-out" : ""}`}>
+          {time.label}
+          {onBreak ? " · paused" : ""}
+        </span>
+      </div>
       <div className="ctl-progress" aria-hidden="true">
         <div
           className="ctl-progress-fill"

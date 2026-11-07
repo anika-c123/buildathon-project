@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage } from "./connection.js";
 import { useQuote } from "./quotes.js";
+import { useSessionTime } from "./timer.js";
 import "./desk.css";
 
 // The desk view (http://localhost:5173/desk), projected onto the desk.
@@ -16,48 +17,6 @@ import "./desk.css";
 const REENTRY_SHOW_MS = 8000; // contract §5: show a welcome-back for about 8 seconds
 const CELEBRATE_MS = 1600;
 
-// Re-renders every second so the time bars move.
-function useNow(intervalMs = 1000) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
-
-// Time spent on breaks this session, measured here in the app, so the session
-// time bar can pause during a break (CLAUDE.md: "the timer runs inside the app").
-// Resets when a new session starts. If the page is reloaded mid-session, breaks
-// before the reload aren't counted, which is fine for a demo.
-function useBreakTime(data) {
-  const total = useRef(0);
-  const breakStart = useRef(null);
-  const session = useRef(null);
-  const [, force] = useState(0);
-
-  const startedAt = data?.started_at ?? null;
-  const onBreak = data?.status === "break";
-
-  useEffect(() => {
-    if (startedAt !== session.current) {
-      session.current = startedAt;
-      total.current = 0;
-      breakStart.current = null;
-    }
-    if (onBreak && breakStart.current === null) {
-      breakStart.current = Date.now();
-      force((n) => n + 1);
-    } else if (!onBreak && breakStart.current !== null) {
-      total.current += Date.now() - breakStart.current;
-      breakStart.current = null;
-      force((n) => n + 1);
-    }
-  }, [startedAt, onBreak]);
-
-  return (now) => total.current + (breakStart.current !== null ? now - breakStart.current : 0);
-}
-
 // Remembers when the current break began, so the break bar knows its full length.
 function useBreakLength(data) {
   const began = useRef(null);
@@ -71,8 +30,8 @@ function useBreakLength(data) {
 
 export default function Desk() {
   const { connected, data } = useSessionUpdate();
-  const now = useNow();
-  const breakTime = useBreakTime(data);
+  const time = useSessionTime(data);
+  const now = time.now;
   const breakLength = useBreakLength(data);
 
   // Welcome-back message, shown for 8 seconds.
@@ -138,9 +97,6 @@ export default function Desk() {
   }
 
   const onBreak = data.status === "break";
-  const total = Math.max(1, (data.ends_at ?? 0) - (data.started_at ?? 0));
-  const focusedMs = Math.max(0, now - data.started_at - breakTime(now));
-  const timeLeft = clamp01(1 - focusedMs / total);
   const breakLeft = data.break_ends_at ? clamp01((data.break_ends_at - now) / breakLength) : 0;
 
   return (
@@ -155,7 +111,7 @@ export default function Desk() {
           reentry={reentry}
           celebration={celebration}
         />
-        <ProgressPanel steps={steps} timeLeft={timeLeft} onBreak={onBreak} goal={data.goal} />
+        <ProgressPanel steps={steps} time={time} onBreak={onBreak} />
         <QuotePanel />
         <ParkedPanel items={data.parked} />
         <div className="dsk-laptop-zone" aria-hidden="true">
@@ -219,7 +175,10 @@ function NowPanel({ data, steps, onBreak, breakLeft, breakOver, reentry, celebra
           {reentry.text}
         </p>
       ) : (
-        <p className="dsk-kicker">{allDone ? `All ${steps.length} steps done` : `Step ${i + 1} of ${steps.length}`}</p>
+        <div className="dsk-now-head">
+          <p className="dsk-kicker">{allDone ? `All ${steps.length} steps done` : `Step ${i + 1} of ${steps.length}`}</p>
+          <p className="dsk-now-goal">{data.goal}</p>
+        </div>
       )}
       <h1 className="dsk-big" key={i}>
         {allDone ? "Nice work. Wrap up on the laptop." : steps[i]?.text}
@@ -265,28 +224,29 @@ function Celebration() {
   );
 }
 
-// ---------- Progress: steps done (thick bar) + session time (thin line) ----------
-// The thick bar matches the laptop's progress bar: it fills as steps are ticked
-// off. The thin line under it is the calm session timer (CLAUDE.md): it shrinks
-// as time passes, shows no numbers, and pauses during a break.
+// ---------- Progress + time ----------
+// Thick bar: steps done, matching the laptop's progress bar.
+// "40 min left": time left in calm steps (60 → 50 → 40 …, see timer.js), not every minute.
+// Bar under it: the detailed view of time left, sliding down smoothly. Pauses on a break.
 
-function ProgressPanel({ steps, timeLeft, onBreak, goal }) {
+function ProgressPanel({ steps, time, onBreak }) {
   const done = steps.filter((s) => s.done).length;
   const fraction = steps.length ? done / steps.length : 0;
+  const outOfTime = time.remainingMs <= 0;
   return (
     <Panel className="dsk-time">
       <p className="dsk-label">
         Progress · {done} of {steps.length} steps
       </p>
-      <p className="dsk-goal">{goal}</p>
-      <div className="dsk-progress-block">
-        <div className="dsk-bar" aria-hidden="true">
-          <div className="dsk-bar-fill" style={{ width: `${fraction * 100}%` }} />
-        </div>
-        <div className={`dsk-timeline ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
-          <div className="dsk-timeline-fill" style={{ width: `${timeLeft * 100}%` }} />
-        </div>
-        <p className="dsk-timeline-label">{onBreak ? "time · paused" : "time"}</p>
+      <div className="dsk-bar" aria-hidden="true">
+        <div className="dsk-bar-fill" style={{ width: `${fraction * 100}%` }} />
+      </div>
+      <div className="dsk-clock">
+        <p className={`dsk-time-left ${outOfTime ? "is-out" : ""}`}>{time.label}</p>
+        {onBreak && <span className="dsk-paused">paused</span>}
+      </div>
+      <div className={`dsk-timeline ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
+        <div className="dsk-timeline-fill" style={{ width: `${time.fraction * 100}%` }} />
       </div>
     </Panel>
   );
