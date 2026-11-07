@@ -111,6 +111,8 @@ def tick(session) -> bool:
     goal = state["goal"]
 
     # Phone takes priority — it's the distraction the browser can't see.
+    # (B15: both this and the away-confirmation above already require an
+    # exact non-"unknown" camera.state, so neither can ever fire on "unknown".)
     if camera["state"] == "phone_in_hand" and now - camera["since"] >= seconds["phone"] * 1000:
         session.fire_nudge("phone", _wording(session, "phone", goal))
         return True

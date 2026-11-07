@@ -137,8 +137,10 @@ async def post_event(request: Request):
                 await broadcast(extra_type, extra_data)
 
     elif message["type"] == "camera_state":
-        # Vision only sends this during a session (same rule as tab_change).
-        if session.snapshot()["status"] in ("studying", "break"):
+        # B15 / docs/CONTRACT.md: vision only opens the camera during
+        # studying, and the backend ignores anything received outside it —
+        # a break releases the camera too, not just pausing nudges.
+        if session.snapshot()["status"] == "studying":
             data = message["data"]
             nudges.record_camera_heartbeat(session)
             extra = session.set_camera(data.get("state", "unknown"), data.get("confidence"))
