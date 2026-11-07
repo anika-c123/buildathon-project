@@ -1,7 +1,7 @@
 # buildathon-project
-Junhui Park, Anika Chadha, Shree Reddi
+Team members: Junhui Park, Anika Chadha, Shree Reddi
 
-## GoPro 8, Projector, WebApp, Chrome extension, API
+## Basic Set up: GoPro 8, Projector, WebApp, Chrome extension, API
 
 - Mount GoPro 8 and Projector. Projector will display the progress, timer, etc., GoPro8 will serve as a webcam for the laptop (or the web app) to detect movements and check if the person is focused
   - Find a way to track movements and interpret that in an accurate way
@@ -10,3 +10,9 @@ Junhui Park, Anika Chadha, Shree Reddi
   - need to find the threshold for when the person is looking at the screen while working vs. not focused
 - API for the WebApp to detect what type of work needs to be done for the certain assignment. User can either say it or type their work through the Web App
 
+## Purpose
+- Allow people to be on task and see their progress real time directly on their desk.
+- Initially aimed for ADHD patients to help them focus
+
+## Possible Features
+- 
