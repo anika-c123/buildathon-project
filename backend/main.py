@@ -6,11 +6,16 @@ session.py (B1).
 
 import asyncio
 import time
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+import relevance
 from session import Session
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 HEARTBEAT_SECONDS = 5
 
@@ -87,8 +92,24 @@ async def post_event(request: Request):
         if extra:
             extra_type, extra_data = extra
             await broadcast(extra_type, extra_data)
-    # tab_change / camera_state are logged above only, for now — B2/B8/B9 will
-    # feed them into the session once relevance checking and vision exist.
+
+    elif message["type"] == "tab_change":
+        # The extension only sends this during a session (contract §4), but
+        # guard anyway in case it arrives late (e.g. right as a session ends).
+        if session.snapshot()["status"] in ("studying", "break"):
+            data = message["data"]
+            domain, title, focused = data.get("domain"), data.get("title"), data.get("focused", True)
+            if focused and domain:
+                goal = session.snapshot()["goal"]
+                label, error = await relevance.check_relevance(goal, domain, title)
+            else:
+                domain, title, label, error = None, None, "unknown", None
+            session.set_activity(domain, title, label)
+            await broadcast("session_update", session.snapshot())
+            if error:
+                await broadcast("error", {"message": error})
+    # camera_state is logged above only, for now — B8/B9 will feed it into
+    # the session once vision exists.
 
     return {"ok": True}
 

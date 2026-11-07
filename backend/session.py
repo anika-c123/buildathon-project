@@ -37,6 +37,16 @@ class Session:
     def snapshot(self) -> dict:
         return self.state
 
+    def set_activity(self, domain: str | None, title: str | None, label: str) -> None:
+        """Updates the current tab's label (B2). `since` only resets when the
+        domain or label actually changes, so it tracks how long this streak
+        has lasted — not every title change on the same page."""
+        current = self.state["activity"]
+        since = current["since"]
+        if current["domain"] != domain or current["label"] != label or since is None:
+            since = now_ms()
+        self.state["activity"] = {"domain": domain, "title": title, "label": label, "since": since}
+
     def apply_action(self, action: str, fields: dict):
         """Applies one user_action. Returns (state_changed, extra_message),
         where extra_message is None or (type, data) for a one-off message
