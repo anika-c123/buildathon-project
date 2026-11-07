@@ -199,6 +199,7 @@ def run_camera(args):
     latest = ("unknown", False, False)
     last_boxes = []
     last_points = []
+    empty_means_away = not args.no_away_detection  # E2: away-from-desk is on by default now
     presence_tracker = PresenceTracker(args.absence_grace)
     held_tracker = PhoneHeldTracker(motion_fraction=args.pickup_motion,
                                    motion_window=args.motion_window,
@@ -249,7 +250,7 @@ def run_camera(args):
                 # E2: recently observed person/hands means present; short
                 # detector dropouts do not automatically imply away.
                 presence = presence_tracker.observe(
-                    people or bool(hands), now, args.empty_means_away
+                    people or bool(hands), now, empty_means_away
                 )
 
                 # E4: phone must move while at least two relevant hand
@@ -321,8 +322,10 @@ def main():
                         help="Seconds of missing hand contact before releasing held state")
     parser.add_argument("--absence-grace", type=float, default=2.0,
                         help="Seconds with no person/hands before raw away can begin")
-    parser.add_argument("--empty-means-away", action="store_true",
-                        help="Treat empty frame as away; only for calibrated full-desk view")
+    parser.add_argument("--no-away-detection", action="store_true",
+                        help="Don't report 'away' for an empty frame (E2 is on by default; use this "
+                             "for an uncalibrated/partial desk view where hands often leave frame "
+                             "while the student is still there)")
     parser.add_argument("--verbose-backend", action="store_true")
     parser.add_argument("--no-window", action="store_true")
     parser.add_argument("--draw", action="store_true")
