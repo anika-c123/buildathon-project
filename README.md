@@ -1,5 +1,5 @@
 # buildathon-project
-### Junhui Park, Anika Chadha, Shree Reddi
+Junhui Park, Anika Chadha, Shree Reddi
 
 ## GoPro 8, Projector, WebApp, Chrome extension, API
 
