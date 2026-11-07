@@ -843,6 +843,55 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-.ctl-time-left.is-out {
-  color: var(--ctl-accent);
+
+/* ---------- Parked card (under the quote) ---------- */
+
+.ctl-parked-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px;
+}
+
+.ctl-parked-card .ctl-label {
+  margin: 0;
+}
+
+.ctl-parked-empty {
+  margin: 0;
+}
+
+.ctl-parked-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.ctl-parked-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--ctl-line);
+  animation: ctl-nudge-in 0.4s ease-out;
+}
+
+.ctl-parked-list li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ctl-parked-time {
+  flex: none;
+  font-size: 12px;
+  color: var(--ctl-faint);
+  font-variant-numeric: tabular-nums;
 }

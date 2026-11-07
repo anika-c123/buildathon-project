@@ -233,7 +233,6 @@ function Celebration() {
 function ProgressPanel({ steps, time, onBreak }) {
   const done = steps.filter((s) => s.done).length;
   const fraction = steps.length ? done / steps.length : 0;
-  const outOfTime = time.remainingMs <= 0;
   return (
     <Panel className="dsk-time">
       <p className="dsk-label">
@@ -243,7 +242,7 @@ function ProgressPanel({ steps, time, onBreak }) {
         <div className="dsk-bar-fill" style={{ width: `${fraction * 100}%` }} />
       </div>
       <div className="dsk-clock">
-        <p className={`dsk-time-left ${outOfTime ? "is-out" : ""}`}>{time.label}</p>
+        <p className="dsk-time-left">{time.label}</p>
         {onBreak && <span className="dsk-paused">paused</span>}
       </div>
       <div className={`dsk-timeline ${onBreak ? "is-paused" : ""}`} aria-hidden="true">

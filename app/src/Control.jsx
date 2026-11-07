@@ -153,6 +153,7 @@ export default function Control() {
         </main>
         <aside className="ctl-side">
           <QuoteCard />
+          {inSession && <ParkedCard parked={data.parked} connected={connected} send={send} />}
         </aside>
       </div>
     </div>
@@ -352,7 +353,7 @@ function StudyingView({ data, connected, send, onEnd }) {
         <span className="ctl-muted">
           {doneCount} of {steps.length} steps done
         </span>
-        <span className={`ctl-time-left ${time.remainingMs <= 0 ? "is-out" : ""}`}>
+        <span className="ctl-time-left">
           {time.label}
           {onBreak ? " · paused" : ""}
         </span>
@@ -392,8 +393,6 @@ function StudyingView({ data, connected, send, onEnd }) {
         )}
       </div>
 
-      <ParkBox connected={connected} send={send} />
-
       <div className="ctl-footer">
         <p className="ctl-muted ctl-small">
           Projector view: <code>localhost:5173/desk</code>, full screen on the projector.
@@ -404,6 +403,40 @@ function StudyingView({ data, connected, send, onEnd }) {
       </div>
     </div>
   );
+}
+
+// Parked for later: the park box plus everything parked this session,
+// newest first. (The same list shows small on the desk.)
+function ParkedCard({ parked, connected, send }) {
+  const items = [...(parked ?? [])].reverse();
+  return (
+    <section className="ctl-card ctl-parked-card" aria-label="Parked for later">
+      <p className="ctl-label">
+        Parked for later{items.length ? ` · ${items.length}` : ""}
+      </p>
+      <ParkBox connected={connected} send={send} />
+      {items.length === 0 ? (
+        <p className="ctl-muted ctl-small ctl-parked-empty">
+          Stray thought? Park it here and get back to work. It'll wait for you.
+        </p>
+      ) : (
+        <ul className="ctl-parked-list">
+          {items.map((item, k) => (
+            <li key={`${item.timestamp}-${k}`}>
+              <span>{item.text}</span>
+              <time className="ctl-parked-time">{clock(item.timestamp)}</time>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// "4:12 PM" from a timestamp, for the parked list.
+function clock(timestamp) {
+  if (!timestamp) return "";
+  return new Date(timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 // One-line "park a thought": type it, press Enter, it shows on the desk.

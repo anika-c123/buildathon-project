@@ -265,9 +265,6 @@
   animation: dsk-rise 0.6s ease-out;
 }
 
-.dsk-time-left.is-out {
-  color: var(--dsk-peach);
-}
 
 .dsk-paused {
   font-size: clamp(10px, 0.95vw, 20px);
