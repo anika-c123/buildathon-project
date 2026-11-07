@@ -62,14 +62,13 @@ def now_ms() -> int:
 
 def _wording(session, reason: str, goal: str) -> str:
     options = WORDINGS[reason]
-    index = session._wording_index.get(reason, 0)
-    session._wording_index[reason] = index + 1
+    index = session.next_wording_index(reason)
     return options[index % len(options)].format(goal=goal or "your goal")
 
 
 def record_camera_heartbeat(session) -> None:
     """Call this on every camera_state message, so camera silence can be detected."""
-    session._last_camera_at = now_ms()
+    session.note_camera_heartbeat(now_ms())
 
 
 def tick(session) -> bool:
@@ -82,11 +81,12 @@ def tick(session) -> bool:
     # Camera silence -> unknown. Runs in any session state, per the contract.
     # Uses camera_went_silent(), not set_camera(): losing signal isn't the
     # same as vision reporting the phone was put down or the student is back.
+    silent_for = session.camera_silent_for(now)
     if (
         state["status"] != "idle"
-        and session._last_camera_at is not None
+        and silent_for is not None
         and state["camera"]["state"] != "unknown"
-        and now - session._last_camera_at >= CAMERA_SILENCE_MS
+        and silent_for >= CAMERA_SILENCE_MS
     ):
         session.camera_went_silent()
         changed = True
@@ -100,18 +100,12 @@ def tick(session) -> bool:
 
     # Away long enough to count — enables the reentry-on-return rule in
     # session.set_camera(), which fires once they come back.
-    if camera["state"] == "away" and not session._away_confirmed:
-        if now - camera["since"] >= seconds["away"] * 1000:
-            session._away_confirmed = True
+    session.confirm_away_if_due(now, seconds["away"] * 1000)
 
     if state["active_nudge"] is not None:
         return changed  # only one nudge on screen at a time
 
-    cooldown_ok = (
-        session._last_nudge_cleared_at is None
-        or now - session._last_nudge_cleared_at >= seconds["cooldown"] * 1000
-    )
-    if not cooldown_ok:
+    if not session.cooldown_elapsed(now, seconds["cooldown"] * 1000):
         return changed
 
     goal = state["goal"]
@@ -133,12 +127,9 @@ def tick(session) -> bool:
         )
         return True
 
-    if (
-        session._study_segment_started_at is not None
-        and now - session._study_segment_started_at >= seconds["long_stretch"] * 1000
-    ):
+    if session.study_segment_elapsed(now, seconds["long_stretch"] * 1000):
         session.fire_nudge("long_stretch", _wording(session, "long_stretch", goal))
-        session._study_segment_started_at = now  # restart the clock for the next one
+        session.restart_study_segment(now)  # restart the clock for the next one
         return True
 
     return changed

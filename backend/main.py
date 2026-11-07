@@ -48,7 +48,10 @@ async def broadcast(msg_type: str, data: dict) -> None:
     """Pushes one message to every app connected over /ws right now."""
     message = _envelope(msg_type, data)
     dead = set()
-    for ws_conn in connections:
+    # Iterate a snapshot: a concurrent disconnect's connections.discard()
+    # (in the /ws handler's `finally`) must not mutate the set while another
+    # broadcast (heartbeat/tick loops can overlap) is iterating over it.
+    for ws_conn in list(connections):
         try:
             await ws_conn.send_json(message)
         except Exception:
@@ -119,6 +122,11 @@ async def post_event(request: Request):
                     label, error = await relevance.check_relevance(goal, domain, title)
             else:
                 domain, title, label = None, None, "unknown"
+            # The AI call above can take seconds; re-check the session is
+            # still live, since a concurrent end_session (or a new
+            # start_session) could have replaced it entirely while we waited.
+            if session.snapshot()["status"] not in ("studying", "break"):
+                return {"ok": True}
             session.set_activity(domain, title, label)
             extra = session.clear_nudge_if_back_on_task(domain, label)
             await broadcast("session_update", session.snapshot())

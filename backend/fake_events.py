@@ -27,8 +27,8 @@ DEMO_STORY = [
     ("camera_present.json", 1),  # Writing in the notebook — present, nothing happens.
     ("tab_change_unrelated.json", 2),  # Open Instagram — a nudge follows after 8s (demo mode).
     ("tab_change_relevant.json", 10),  # Back to Java docs — clears the nudge, welcome back.
-    ("camera_phone.json", 2),  # Pick up the phone — a nudge follows after 6s (demo mode).
-    ("camera_present.json", 8),  # Put it down — clears the nudge, welcome back. (Under the 15s camera-silence window.)
+    ("camera_phone.json", 10),  # Pick up the phone — waits out the 15s cooldown from the last nudge clearing, then the phone nudge follows.
+    ("camera_present.json", 9),  # Put it down — clears the nudge, welcome back. (Still under the 15s camera-silence window.)
     ("action_park.json", 1),  # Jot "email my TA" in the parking lot.
     ("action_step_done.json", 2),  # Mark the current step done.
     ("action_end.json", 1),  # End the session — summary.

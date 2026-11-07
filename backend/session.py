@@ -43,6 +43,7 @@ class Session:
         self._relevant_domains: set[str] = set()
         self._last_nudge_cleared_at: int | None = None
         self._last_camera_at: int | None = None
+        self._last_real_camera_state: str | None = None
         self._away_confirmed = False
         self._study_segment_started_at: int | None = None
 
@@ -67,13 +68,20 @@ class Session:
     def set_camera(self, cam_state: str, confidence: float | None) -> tuple[str, dict] | None:
         """Updates camera state (B8/B9). Returns an extra ("reentry", data)
         message when this is a return from a confirmed-away stretch, or from
-        putting down a phone that had an active nudge up — else None."""
+        putting down a phone that had an active nudge up — else None.
+
+        Compares against the last REAL observation (_last_real_camera_state),
+        not the displayed camera.state, so a camera-silence gap in between
+        (camera_went_silent(), which never touches that field) can't erase
+        the "away"/"phone_in_hand" history this check depends on."""
         old = self.state["camera"]
+        was_away = self._last_real_camera_state == "away"
+        was_phone = self._last_real_camera_state == "phone_in_hand"
         extra = None
-        if old["state"] == "away" and cam_state != "away" and self._away_confirmed:
+        if was_away and cam_state != "away" and self._away_confirmed:
             extra = ("reentry", self.reentry_message())
         elif (
-            old["state"] == "phone_in_hand"
+            was_phone
             and cam_state != "phone_in_hand"
             and self.state["active_nudge"]
             and self.state["active_nudge"]["reason"] == "phone"
@@ -87,13 +95,16 @@ class Session:
         if old["state"] != cam_state or since is None:
             since = now_ms()
         self.state["camera"] = {"state": cam_state, "since": since}
+        self._last_real_camera_state = cam_state
         return extra
 
     def camera_went_silent(self) -> None:
         """Camera silence -> unknown (contract §6). This is a fallback for
         when vision has stopped reporting, NOT a real observation — so unlike
         set_camera(), it must never trigger the "phone put down" or "back
-        from away" reentry logic. We genuinely don't know what happened."""
+        from away" reentry logic, and it leaves _last_real_camera_state
+        alone so a later real observation can still compare against what
+        actually happened before the silence."""
         self.state["camera"] = {"state": "unknown", "since": now_ms()}
 
     def clear_nudge_if_back_on_task(self, domain: str | None, label: str) -> tuple[str, dict] | None:
@@ -116,6 +127,42 @@ class Session:
         self.state["active_nudge"] = nudge
         self._active_nudge_domain = domain
         return nudge
+
+    # ---- Bookkeeping nudges.py's tick() needs, kept behind named methods
+    # ---- instead of letting it poke underscore-prefixed fields directly.
+
+    def note_camera_heartbeat(self, now: int) -> None:
+        self._last_camera_at = now
+
+    def camera_silent_for(self, now: int) -> int | None:
+        if self._last_camera_at is None:
+            return None
+        return now - self._last_camera_at
+
+    def confirm_away_if_due(self, now: int, threshold_ms: int) -> None:
+        """Marks the current away stretch "confirmed" once it's held long
+        enough — enables the reentry-on-return rule in set_camera()."""
+        camera = self.state["camera"]
+        if camera["state"] == "away" and not self._away_confirmed:
+            if now - camera["since"] >= threshold_ms:
+                self._away_confirmed = True
+
+    def cooldown_elapsed(self, now: int, cooldown_ms: int) -> bool:
+        return self._last_nudge_cleared_at is None or now - self._last_nudge_cleared_at >= cooldown_ms
+
+    def study_segment_elapsed(self, now: int, threshold_ms: int) -> bool:
+        return (
+            self._study_segment_started_at is not None
+            and now - self._study_segment_started_at >= threshold_ms
+        )
+
+    def restart_study_segment(self, now: int) -> None:
+        self._study_segment_started_at = now
+
+    def next_wording_index(self, reason: str) -> int:
+        index = self._wording_index.get(reason, 0)
+        self._wording_index[reason] = index + 1
+        return index
 
     def apply_action(self, action: str, fields: dict):
         """Applies one user_action. Returns (state_changed, extra_message),
@@ -179,6 +226,9 @@ class Session:
         self.state["status"] = "break"
         self.state["break_ends_at"] = now_ms() + minutes * 60_000
         # No nudges during a break (contract §6), and the long-stretch clock pauses.
+        # Clearing a nudge this way starts the cooldown too, same as dismiss.
+        if self.state["active_nudge"] is not None:
+            self._last_nudge_cleared_at = now_ms()
         self.state["active_nudge"] = None
         self._active_nudge_domain = None
         self._study_segment_started_at = None
@@ -205,13 +255,16 @@ class Session:
         return True, None
 
     def _handle_relevant(self, fields):
-        if self._active_nudge_domain:
-            self._relevant_domains.add(self._active_nudge_domain)
-            if self.state["activity"]["domain"] == self._active_nudge_domain:
-                self.state["activity"]["label"] = "relevant"
+        # Whitelist whatever tab the student is actually looking at right
+        # now, not necessarily the tab that originally triggered the nudge
+        # still on screen (they may have switched tabs since). Contract §4
+        # documents only `dismiss` as starting the cooldown, so this doesn't.
+        domain = self.state["activity"]["domain"]
+        if self.state["active_nudge"] is not None and domain:
+            self._relevant_domains.add(domain)
+            self.state["activity"]["label"] = "relevant"
         self.state["active_nudge"] = None
         self._active_nudge_domain = None
-        self._last_nudge_cleared_at = now_ms()
         return True, None
 
     def _handle_end_session(self, fields):
