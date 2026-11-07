@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage } from "./connection.js";
+import { useQuote } from "./quotes.js";
 import "./desk.css";
 
 // The desk view (http://localhost:5173/desk), projected onto the desk.
 //
 // DISPLAY ONLY: a projection can't be clicked, so there are no buttons here.
-// Every button (step done, break, park, nudge answers) lives on the laptop's
-// control screen. This page just draws the latest session_update as glowing
-// outlined panels on black (black = no light, so only the panels show up on
-// the desk), arranged around a dashed zone where the laptop sits.
+// Every button (step done, break, park, nudge answers, new quote) lives on the
+// laptop's control screen. This page just draws the latest session_update as
+// glowing outlines with see-through (black) insides: black projects no light,
+// so on a dark desk only the outlines and text show. Panels sit around a
+// dashed zone where the laptop goes.
 
 const REENTRY_SHOW_MS = 8000; // contract §5: show a welcome-back for about 8 seconds
 const CELEBRATE_MS = 1600;
@@ -126,6 +128,7 @@ export default function Desk() {
       <Screen>
         <div className="dsk-solo">
           <Panel className="dsk-solo-panel">
+            <span className="dsk-orb" aria-hidden="true" />
             <p className="dsk-brand">PLocked</p>
             <p className="dsk-solo-line">Start a session on the laptop.</p>
           </Panel>
@@ -153,6 +156,7 @@ export default function Desk() {
           celebration={celebration}
         />
         <TimePanel timeLeft={timeLeft} onBreak={onBreak} goal={data.goal} />
+        <QuotePanel />
         <ParkedPanel items={data.parked} />
         <div className="dsk-laptop-zone" aria-hidden="true">
           <span>laptop</span>
@@ -271,6 +275,21 @@ function TimePanel({ timeLeft, onBreak, goal }) {
       <div className={`dsk-bar ${onBreak ? "is-paused" : ""}`} aria-hidden="true">
         <div className="dsk-bar-fill" style={{ width: `${timeLeft * 100}%` }} />
       </div>
+    </Panel>
+  );
+}
+
+// ---------- Quote (changed from the laptop) ----------
+
+function QuotePanel() {
+  const quote = useQuote();
+  return (
+    <Panel className="dsk-quote">
+      <p className="dsk-label">A little push</p>
+      <p className="dsk-quote-text" key={quote.text}>
+        “{quote.text}”
+      </p>
+      {quote.author && <p className="dsk-quote-author">— {quote.author}</p>}
     </Panel>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSessionUpdate } from "./useSessionUpdate.js";
 import { onMessage, sendAction } from "./connection.js";
+import { addQuote, nextQuote, useQuote } from "./quotes.js";
 import "./control.css";
 
 // The laptop control screen (http://localhost:5173/).
@@ -131,7 +132,7 @@ export default function Control() {
       )}
       <header className="ctl-header">
         <span className="ctl-brand">
-          <LockMark />
+          <span className="ctl-orb" aria-hidden="true" />
           <span className="ctl-logo">PLocked</span>
         </span>
         <span className="ctl-subtitle">
@@ -139,14 +140,19 @@ export default function Control() {
           {connected ? "Connected" : "Offline"}
         </span>
       </header>
-      <main className="ctl-card">
-        {notice && (
-          <p className="ctl-notice" role="alert">
-            {notice}
-          </p>
-        )}
-        {view}
-      </main>
+      <div className="ctl-layout">
+        <main className="ctl-card">
+          {notice && (
+            <p className="ctl-notice" role="alert">
+              {notice}
+            </p>
+          )}
+          {view}
+        </main>
+        <aside className="ctl-side">
+          <QuoteCard />
+        </aside>
+      </div>
     </div>
   );
 }
@@ -185,7 +191,7 @@ function SetupView({
     >
       <div className="ctl-section">
         <label className="ctl-headline" htmlFor="goal">
-          What do you want to get done?
+          <strong>{greeting()},</strong> what do you want to get done?
         </label>
         <div className="ctl-row">
           <input
@@ -482,13 +488,79 @@ function Arrow({ small = false }) {
   );
 }
 
-// A small rounded padlock: PLocked's own mark.
-function LockMark() {
+// "Good morning" / "Good afternoon" / "Good evening", from the laptop's clock.
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+// ---------- Quote on the desk ----------
+// Shows the quote currently projected on the desk. "New quote" picks another at
+// random; "Add your own" saves yours and shows it on the desk straight away.
+
+function QuoteCard() {
+  const quote = useQuote();
+  const [adding, setAdding] = useState(false);
+  const [text, setText] = useState("");
+  const [author, setAuthor] = useState("");
+
+  function save(e) {
+    e.preventDefault();
+    if (addQuote(text, author)) {
+      setText("");
+      setAuthor("");
+      setAdding(false);
+    }
+  }
+
   return (
-    <svg className="ctl-mark" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7.5 10V7.5a4.5 4.5 0 0 1 9 0V10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-      <rect x="4" y="10" width="16" height="11.5" rx="4" fill="currentColor" />
-      <circle cx="12" cy="15.6" r="1.7" fill="#fbfcf5" />
-    </svg>
+    <section className="ctl-card ctl-quote-card" aria-label="Quote on the desk">
+      <p className="ctl-label">Quote on the desk</p>
+      <blockquote className="ctl-quote" key={quote.text}>
+        <p>“{quote.text}”</p>
+        {quote.author && <footer>— {quote.author}</footer>}
+      </blockquote>
+
+      {adding ? (
+        <form className="ctl-quote-form" onSubmit={save}>
+          <textarea
+            className="ctl-input ctl-textarea"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Type a quote that keeps you going…"
+            aria-label="Your quote"
+            rows={3}
+            maxLength={160}
+            autoFocus
+          />
+          <input
+            className="ctl-input"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            placeholder="Who said it? (optional)"
+            aria-label="Who said it"
+          />
+          <div className="ctl-quote-buttons">
+            <button type="submit" className="ctl-btn ctl-btn-primary" disabled={!text.trim()}>
+              Save &amp; show
+            </button>
+            <button type="button" className="ctl-btn ctl-btn-quiet" onClick={() => setAdding(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="ctl-quote-buttons">
+          <button type="button" className="ctl-btn ctl-btn-secondary" onClick={() => nextQuote()}>
+            ↻ New quote
+          </button>
+          <button type="button" className="ctl-btn ctl-btn-quiet" onClick={() => setAdding(true)}>
+            + Add your own
+          </button>
+        </div>
+      )}
+    </section>
   );
 }

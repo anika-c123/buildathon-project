@@ -1,0 +1,42 @@
+# PLocked inspirational quotes — one per line, written as:  quote ~ who said it
+# Lines starting with # are ignored. Add your own anywhere.
+# Classic lines are from public-domain sources; lines marked "PLocked" are our own.
+
+Well begun is half done. ~ Aristotle
+A journey of a thousand miles begins with a single step. ~ Lao Tzu
+While we are postponing, life speeds by. ~ Seneca
+Begin at once to live. ~ Seneca
+First say to yourself what you would be; and then do what you have to do. ~ Epictetus
+Waste no more time arguing what a good man should be. Be one. ~ Marcus Aurelius
+Lost time is never found again. ~ Benjamin Franklin
+Well done is better than well said. ~ Benjamin Franklin
+There is no substitute for hard work. ~ Thomas Edison
+Real knowledge is to know the extent of one's ignorance. ~ Confucius
+If I have seen further it is by standing on the shoulders of Giants. ~ Isaac Newton
+Little by little, one travels far. ~ Spanish proverb
+The best time to plant a tree was twenty years ago. The second best time is now. ~ Proverb
+Small steps, taken daily, become big leaps. ~ PLocked
+You don't have to feel ready. You just have to start. ~ PLocked
+One step at a time is still moving forward. ~ PLocked
+Finish this step. That's the whole job right now. ~ PLocked
+Focus is a muscle. Every session makes it stronger. ~ PLocked
+The phone will still be there in an hour. So will your future. ~ PLocked
+Done is a feeling worth chasing. ~ PLocked
+Progress, not perfection. ~ PLocked
+A rough draft beats a perfect plan. ~ PLocked
+Hard things get easier the moment you begin them. ~ PLocked
+You are closer than you were this morning. ~ PLocked
+Twenty focused minutes beat two distracted hours. ~ PLocked
+Be kind to yourself when you drift. Then come back. ~ PLocked
+Start small. Stay curious. Keep going. ~ PLocked
+Your future self is cheering for this exact moment. ~ PLocked
+Confusion is just learning that hasn't finished yet. ~ PLocked
+Every bug you fix makes you a better programmer. ~ PLocked
+Make it work, then make it beautiful. ~ PLocked
+The best way out is through. One line at a time. ~ PLocked
+Breaks are part of the work, not a reward for it. ~ PLocked
+Quiet mind, clear desk, one task. ~ PLocked
+You've done hard things before. This is one more. ~ PLocked
+Show up for the next ten minutes. That's all. ~ PLocked
+Attention is the rarest gift you can give your work. ~ PLocked
+Curiosity first. Grades follow. ~ PLocked

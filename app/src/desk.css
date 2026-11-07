@@ -1,16 +1,17 @@
 /* Desk view: projected onto the desk, display only.
-   Pure black background (black = no light from the projector, so the desk
-   shows through) with glowing cream outlined panels, like a desk UI drawn
-   in light. Sizes in vw/vh so it scales with any projector. No red. */
+   Same soft "glass" mood as the laptop (peach, pink, lavender, a glossy orb),
+   but drawn as OUTLINES ONLY: every panel's inside is pure black, and black is
+   "no light" on a projector, so on a dark desk you see just glowing outlines
+   and text, never a white box. Sizes in vw/vh to fit any projector. No red. */
 
 .dsk-screen {
-  --dsk-ink: #f3eedc;
-  --dsk-soft: #bdb7a3;
-  --dsk-faint: #5c584d;
-  --dsk-line: #efe9d4;
-  --dsk-lime: #dcef84;
-  --dsk-sand: #ebc98a;
-  --dsk-serif: "Fraunces Variable", Georgia, serif;
+  --dsk-ink: #fff6f1;
+  --dsk-soft: #cdbfc9;
+  --dsk-faint: #6b5f6c;
+  --dsk-peach: #ffb08c;
+  --dsk-pink: #f5a3c7;
+  --dsk-lilac: #c8b4f5;
+  --dsk-edge: linear-gradient(135deg, #ffc4a6 0%, #f5a3c7 50%, #c8b4f5 100%);
   --dsk-sans: "Figtree Variable", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
 
   position: fixed;
@@ -23,19 +24,20 @@
 }
 
 /* ---------- Layout ---------- */
-/*  [ Now (big)           ][ Time   ]
-    [ Parked ][ laptop    ][ Status ]  */
+/*  [ Now (step)       ][ Session ][ Quote  ]
+    [ Parked ][ laptop zone       ][ Status ]
+    Both rows the same height: the laptop zone is the same size as Now. */
 
 .dsk-grid {
   position: absolute;
   inset: 4vh 3vw;
   display: grid;
-  grid-template-columns: 1fr 1.15fr 1fr;
-  grid-template-rows: 1.35fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   grid-template-areas:
-    "now now time"
-    "parked laptop status";
-  gap: 2.4vw;
+    "now now time quote"
+    "parked laptop laptop status";
+  gap: 2vw;
 }
 
 .dsk-now {
@@ -44,6 +46,9 @@
 .dsk-time {
   grid-area: time;
 }
+.dsk-quote {
+  grid-area: quote;
+}
 .dsk-parked {
   grid-area: parked;
 }
@@ -51,26 +56,32 @@
   grid-area: status;
 }
 
-/* ---------- Glowing panel ---------- */
+/* ---------- Glass outline panel ----------
+   The gradient sits on the border only; the inside (padding-box) is black. */
 
 .dsk-panel {
   position: relative;
-  border: clamp(2px, 0.22vw, 4px) solid var(--dsk-line);
-  border-radius: 2.2vw;
-  padding: 3.4vh 2.4vw;
+  border: clamp(2px, 0.2vw, 4px) solid transparent;
+  border-radius: 2.4vw;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    var(--dsk-edge) border-box;
+  padding: 3vh 2vw;
   box-shadow:
-    0 0 1.2vw rgba(239, 233, 212, 0.28),
-    inset 0 0 1.2vw rgba(239, 233, 212, 0.1);
+    0 0 1.4vw rgba(245, 163, 199, 0.22),
+    inset 0 0 1.6vw rgba(200, 180, 245, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 2vh;
+  gap: 1.6vh;
   min-width: 0;
   min-height: 0;
-  transition: border-color 0.6s, box-shadow 0.6s;
+  overflow: hidden;
 }
 
 .dsk-tone-nudge {
-  border-color: var(--dsk-lime);
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(135deg, #ffd0b8, #ffb08c 45%, #f5a3c7) border-box;
   animation: dsk-breathe 3s ease-in-out infinite;
 }
 
@@ -78,40 +89,38 @@
   0%,
   100% {
     box-shadow:
-      0 0 1.2vw rgba(220, 239, 132, 0.3),
-      inset 0 0 1.2vw rgba(220, 239, 132, 0.1);
+      0 0 1.4vw rgba(255, 176, 140, 0.3),
+      inset 0 0 1.4vw rgba(255, 176, 140, 0.1);
   }
   50% {
     box-shadow:
-      0 0 2.6vw rgba(220, 239, 132, 0.55),
-      inset 0 0 1.8vw rgba(220, 239, 132, 0.18);
+      0 0 3vw rgba(255, 176, 140, 0.55),
+      inset 0 0 2vw rgba(255, 176, 140, 0.18);
   }
 }
 
 .dsk-tone-break {
-  border-color: var(--dsk-sand);
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(135deg, #e2d6ff, #c8b4f5 50%, #9fb7f0) border-box;
   box-shadow:
-    0 0 1.2vw rgba(235, 201, 138, 0.3),
-    inset 0 0 1.2vw rgba(235, 201, 138, 0.1);
-}
-
-.dsk-tone-welcome {
-  border-color: var(--dsk-lime);
+    0 0 1.4vw rgba(200, 180, 245, 0.3),
+    inset 0 0 1.4vw rgba(200, 180, 245, 0.1);
 }
 
 /* The spot where the laptop sits: just a dashed outline, nothing projected inside. */
 .dsk-laptop-zone {
   grid-area: laptop;
-  border: clamp(2px, 0.18vw, 3px) dashed var(--dsk-faint);
-  border-radius: 2.2vw;
+  border: clamp(2px, 0.16vw, 3px) dashed var(--dsk-faint);
+  border-radius: 2.4vw;
   display: grid;
   place-items: end center;
   padding-bottom: 2vh;
 }
 
 .dsk-laptop-zone span {
-  font-size: clamp(11px, 1vw, 20px);
-  letter-spacing: 0.2em;
+  font-size: clamp(10px, 0.95vw, 19px);
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--dsk-faint);
 }
@@ -120,24 +129,23 @@
 
 .dsk-label {
   margin: 0;
-  font-size: clamp(11px, 1.05vw, 22px);
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: clamp(10px, 0.95vw, 20px);
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--dsk-soft);
 }
 
 .dsk-kicker {
   margin: 0;
-  font-size: clamp(13px, 1.45vw, 30px);
+  font-size: clamp(12px, 1.3vw, 27px);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--dsk-lime);
-}
-
-.dsk-tone-break .dsk-kicker {
-  color: var(--dsk-sand);
+  background: var(--dsk-edge);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .dsk-welcome {
@@ -148,38 +156,35 @@
 
 .dsk-big {
   margin: 0;
-  font-family: var(--dsk-serif);
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  font-size: clamp(26px, 4.1vw, 88px);
-  line-height: 1.1;
+  font-size: clamp(24px, 3.5vw, 76px);
+  line-height: 1.08;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   animation: dsk-rise 0.6s ease-out;
 }
 
 .dsk-nudge-text {
-  font-size: clamp(24px, 3.6vw, 78px);
+  font-size: clamp(22px, 3.1vw, 68px);
 }
 
 .dsk-hint {
   margin: auto 0 0;
-  font-size: clamp(12px, 1.25vw, 26px);
+  font-size: clamp(11px, 1.15vw, 24px);
   color: var(--dsk-soft);
 }
 
 .dsk-quiet {
   margin: 0;
-  font-size: clamp(13px, 1.4vw, 28px);
+  font-size: clamp(12px, 1.25vw, 26px);
   color: var(--dsk-faint);
 }
 
 .dsk-goal {
   margin: 0;
-  font-family: var(--dsk-serif);
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  font-size: clamp(16px, 1.9vw, 40px);
+  font-size: clamp(14px, 1.55vw, 34px);
   font-weight: 600;
   line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 @keyframes dsk-rise {
@@ -189,26 +194,28 @@
   }
 }
 
-/* ---------- Bars (session time, break) ---------- */
+/* ---------- Bars (session time, break): thick, rounded ---------- */
 
 .dsk-bar {
   margin-top: auto;
-  height: clamp(10px, 1.6vh, 20px);
+  height: clamp(16px, 3.4vh, 38px);
   border-radius: 999px;
   border: 2px solid var(--dsk-faint);
-  overflow: hidden;
+  padding: 3px;
 }
 
 .dsk-bar-fill {
   height: 100%;
-  background: var(--dsk-ink);
   border-radius: 999px;
+  background: var(--dsk-edge);
+  box-shadow: 0 0 1vw rgba(245, 163, 199, 0.45);
   transition: width 1s linear;
 }
 
 .dsk-bar.is-paused .dsk-bar-fill,
 .dsk-bar-break .dsk-bar-fill {
-  background: var(--dsk-sand);
+  background: linear-gradient(90deg, #e2d6ff, #c8b4f5);
+  box-shadow: 0 0 1vw rgba(200, 180, 245, 0.45);
 }
 
 .dsk-bar-break {
@@ -229,21 +236,21 @@
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 1.4vw;
+  gap: 1.2vw;
 }
 
 .dsk-dot {
-  width: clamp(13px, 1.4vw, 28px);
-  height: clamp(13px, 1.4vw, 28px);
+  width: clamp(12px, 1.25vw, 26px);
+  height: clamp(12px, 1.25vw, 26px);
   border-radius: 50%;
-  border: 3px solid var(--dsk-faint);
+  border: 2px solid var(--dsk-faint);
   transition: background 0.4s, border-color 0.4s, transform 0.4s;
 }
 
 .dsk-dot-done {
-  background: var(--dsk-lime);
-  border-color: var(--dsk-lime);
-  box-shadow: 0 0 0.8vw rgba(220, 239, 132, 0.5);
+  border-color: transparent;
+  background: radial-gradient(circle at 35% 30%, #ffe1d1, #ffb08c 45%, #e27a9c 80%);
+  box-shadow: 0 0 0.8vw rgba(255, 176, 140, 0.55);
 }
 
 .dsk-dot-current {
@@ -270,17 +277,21 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: clamp(7px, 0.7vw, 13px);
-  height: clamp(7px, 0.7vw, 13px);
-  margin: calc(clamp(7px, 0.7vw, 13px) / -2);
+  width: clamp(7px, 0.65vw, 12px);
+  height: clamp(7px, 0.65vw, 12px);
+  margin: calc(clamp(7px, 0.65vw, 12px) / -2);
   border-radius: 50%;
-  background: var(--dsk-lime);
+  background: var(--dsk-peach);
   opacity: 0;
   animation: dsk-spark 0.9s ease-out var(--delay) forwards;
 }
 
 .dsk-spark:nth-child(3n + 1) {
-  background: var(--dsk-sand);
+  background: var(--dsk-lilac);
+}
+
+.dsk-spark:nth-child(3n + 2) {
+  background: var(--dsk-pink);
 }
 
 @keyframes dsk-spark {
@@ -290,7 +301,7 @@
   }
   100% {
     opacity: 0;
-    transform: rotate(var(--angle)) translateY(-7vw) scale(0.4);
+    transform: rotate(var(--angle)) translateY(-6vw) scale(0.4);
   }
 }
 
@@ -298,13 +309,10 @@
   position: absolute;
   left: 100%;
   top: 50%;
-  margin-left: 2vw;
-  font-family: var(--dsk-serif);
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  font-size: clamp(18px, 2.1vw, 44px);
-  font-weight: 600;
-  font-style: italic;
-  color: var(--dsk-sand);
+  margin-left: 1.6vw;
+  font-size: clamp(16px, 1.8vw, 38px);
+  font-weight: 700;
+  color: var(--dsk-peach);
   white-space: nowrap;
   animation: dsk-nice 1.5s ease-out forwards;
 }
@@ -324,6 +332,26 @@
   }
 }
 
+/* ---------- Quote ---------- */
+
+.dsk-quote-text {
+  margin: 0;
+  font-size: clamp(12px, 1.3vw, 28px);
+  line-height: 1.35;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  animation: dsk-rise 0.8s ease-out;
+}
+
+.dsk-quote-author {
+  margin: auto 0 0;
+  font-size: clamp(10px, 1vw, 21px);
+  color: var(--dsk-soft);
+}
+
 /* ---------- Parked ---------- */
 
 .dsk-parked ul {
@@ -333,7 +361,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.8vh;
-  font-size: clamp(13px, 1.4vw, 28px);
+  font-size: clamp(12px, 1.25vw, 26px);
 }
 
 .dsk-parked li {
@@ -344,7 +372,7 @@
 
 .dsk-parked li::before {
   content: "· ";
-  color: var(--dsk-soft);
+  color: var(--dsk-pink);
 }
 
 /* ---------- Status ---------- */
@@ -352,8 +380,8 @@
 .dsk-status-row {
   display: flex;
   align-items: center;
-  gap: 0.9vw;
-  font-size: clamp(13px, 1.35vw, 28px);
+  gap: 0.8vw;
+  font-size: clamp(12px, 1.2vw, 25px);
   min-width: 0;
 }
 
@@ -371,8 +399,8 @@
 }
 
 .dsk-led {
-  width: clamp(9px, 0.9vw, 18px);
-  height: clamp(9px, 0.9vw, 18px);
+  width: clamp(8px, 0.8vw, 16px);
+  height: clamp(8px, 0.8vw, 16px);
   flex: none;
   border-radius: 50%;
   background: var(--dsk-faint);
@@ -380,19 +408,19 @@
 
 .dsk-led-relevant,
 .dsk-led-cam-present {
-  background: var(--dsk-lime);
-  box-shadow: 0 0 0.7vw rgba(220, 239, 132, 0.6);
+  background: #b9e6c9;
+  box-shadow: 0 0 0.7vw rgba(185, 230, 201, 0.6);
 }
 
 .dsk-led-unrelated,
 .dsk-led-cam-phone_in_hand {
-  background: var(--dsk-sand);
-  box-shadow: 0 0 0.7vw rgba(235, 201, 138, 0.6);
+  background: var(--dsk-peach);
+  box-shadow: 0 0 0.7vw rgba(255, 176, 140, 0.6);
 }
 
 .dsk-led-uncertain,
 .dsk-led-cam-away {
-  background: var(--dsk-soft);
+  background: var(--dsk-lilac);
 }
 
 /* ---------- Idle / connecting ---------- */
@@ -410,18 +438,25 @@
   padding: 5vh 5vw;
 }
 
+/* The glossy orb from the laptop screen, small so it throws little light. */
+.dsk-orb {
+  width: clamp(28px, 3.6vw, 72px);
+  height: clamp(28px, 3.6vw, 72px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff1e8 0%, #ffbf9f 22%, #f2876f 50%, #c9567a 78%, #8e5aa6 100%);
+  box-shadow: 0 0 2vw rgba(242, 135, 111, 0.45);
+}
+
 .dsk-brand {
   margin: 0;
-  font-family: var(--dsk-serif);
-  font-variation-settings: "SOFT" 100, "WONK" 0;
-  font-size: clamp(28px, 4vw, 80px);
+  font-size: clamp(26px, 3.6vw, 76px);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .dsk-solo-line {
   margin: 0;
-  font-size: clamp(15px, 1.7vw, 34px);
+  font-size: clamp(14px, 1.6vw, 32px);
   color: var(--dsk-soft);
 }
 
@@ -429,7 +464,7 @@
   width: clamp(10px, 1vw, 20px);
   height: clamp(10px, 1vw, 20px);
   border-radius: 50%;
-  background: var(--dsk-sand);
+  background: var(--dsk-peach);
   animation: dsk-pulse 1.4s ease-in-out infinite;
 }
 
