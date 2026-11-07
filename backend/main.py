@@ -12,12 +12,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+import nudges
 import relevance
 from session import Session
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 HEARTBEAT_SECONDS = 5
+TICK_SECONDS = 1
 
 app = FastAPI()
 
@@ -55,14 +57,23 @@ async def broadcast(msg_type: str, data: dict) -> None:
 
 
 @app.on_event("startup")
-async def start_heartbeat() -> None:
+async def start_background_loops() -> None:
     asyncio.create_task(_heartbeat_loop())
+    asyncio.create_task(_tick_loop())
 
 
 async def _heartbeat_loop() -> None:
     while True:
         await asyncio.sleep(HEARTBEAT_SECONDS)
         await broadcast("session_update", session.snapshot())
+
+
+async def _tick_loop() -> None:
+    """Runs the nudge timing rules (B4) about once a second."""
+    while True:
+        await asyncio.sleep(TICK_SECONDS)
+        if nudges.tick(session):
+            await broadcast("session_update", session.snapshot())
 
 
 @app.get("/health")
@@ -99,17 +110,34 @@ async def post_event(request: Request):
         if session.snapshot()["status"] in ("studying", "break"):
             data = message["data"]
             domain, title, focused = data.get("domain"), data.get("title"), data.get("focused", True)
+            error = None
             if focused and domain:
-                goal = session.snapshot()["goal"]
-                label, error = await relevance.check_relevance(goal, domain, title)
+                if session.is_marked_relevant(domain):
+                    label = "relevant"  # never re-checked or re-nudged this session (contract §4)
+                else:
+                    goal = session.snapshot()["goal"]
+                    label, error = await relevance.check_relevance(goal, domain, title)
             else:
-                domain, title, label, error = None, None, "unknown", None
+                domain, title, label = None, None, "unknown"
             session.set_activity(domain, title, label)
+            extra = session.clear_nudge_if_back_on_task(domain, label)
             await broadcast("session_update", session.snapshot())
             if error:
                 await broadcast("error", {"message": error})
-    # camera_state is logged above only, for now — B8/B9 will feed it into
-    # the session once vision exists.
+            if extra:
+                extra_type, extra_data = extra
+                await broadcast(extra_type, extra_data)
+
+    elif message["type"] == "camera_state":
+        # Vision only sends this during a session (same rule as tab_change).
+        if session.snapshot()["status"] in ("studying", "break"):
+            data = message["data"]
+            nudges.record_camera_heartbeat(session)
+            extra = session.set_camera(data.get("state", "unknown"), data.get("confidence"))
+            await broadcast("session_update", session.snapshot())
+            if extra:
+                extra_type, extra_data = extra
+                await broadcast(extra_type, extra_data)
 
     return {"ok": True}
 
