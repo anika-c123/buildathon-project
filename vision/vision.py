@@ -9,7 +9,7 @@ import math
 import time
 from collections import deque
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import URLError, HTTPError
 from urllib.request import Request, urlopen, urlretrieve
 
 
@@ -38,6 +38,73 @@ def post_event(base_url, payload):
     except (URLError, TimeoutError, OSError):
         return False
 
+
+
+def get_study_status(base_url):
+    """Return True for studying, False for any other verified status, None on failure.
+
+    Fail closed: None never grants camera access.
+    """
+    try:
+        req = Request(base_url.rstrip("/") + "/state",
+                      headers={"Accept": "application/json"})
+        with urlopen(req, timeout=1.5) as response:
+            payload = json.load(response)
+        if not isinstance(payload, dict):
+            return None
+        # Contract GET /state returns a direct snapshot, not an event envelope.
+        status = payload.get("status")
+        if status in ("studying", "idle", "break", "ended"):
+            return status == "studying"
+        return None
+    except (URLError, TimeoutError, OSError, ValueError, TypeError):
+        return None
+
+
+def open_camera(cv2, index):
+    cap = cv2.VideoCapture(index, cv2.CAP_AVFOUNDATION)
+    if not cap.isOpened():
+        cap.release()
+        return None
+    return cap
+
+
+def stress_test_reopen(cv2, index, cycles=10):
+    """Deliberately open/read/close N times; never run AI or save frames."""
+    passed = 0
+    for i in range(cycles):
+        cap = open_camera(cv2, index)
+        ok = False
+        if cap is not None:
+            try:
+                # Retry briefly for USB/virtual webcam initialization.
+                for _ in range(8):
+                    ret, frame = cap.read()
+                    if ret and frame is not None:
+                        ok = True
+                        break
+                    time.sleep(0.15)
+            finally:
+                cap.release()
+        passed += int(ok)
+        print(f"GoPro reopen trial {i+1}/{cycles}: {'PASS' if ok else 'FAIL'}")
+        time.sleep(0.35)
+    print(f"Result: {passed}/{cycles} successful opens with frames")
+    if passed != cycles:
+        print("Reopening is unreliable. Consider --discard-on-idle as a fallback."
+              " NOTE: that mode keeps the camera physically open when not studying.")
+    return passed == cycles
+
+
+def reset_trackers(args):
+    """No detection state survives between sessions."""
+    return (
+        StableState(args.hold_seconds),
+        PresenceTracker(args.absence_grace),
+        PhoneHeldTracker(motion_fraction=args.pickup_motion,
+                         motion_window=args.motion_window,
+                         release_grace=args.release_grace),
+    )
 
 def deliver(payload, args):
     print(json.dumps(payload))
@@ -162,6 +229,9 @@ class StableState:
 
 
 def run_camera(args):
+    if not args.backend:
+        raise SystemExit("E13 requires --backend URL for GET /state."
+                         " Use --demo for no-camera testing or --stress-reopen 10 for camera testing.")
     try:
         import cv2
         import mediapipe as mp
@@ -199,7 +269,6 @@ def run_camera(args):
     latest = ("unknown", False, False)
     last_boxes = []
     last_points = []
-    empty_means_away = not args.no_away_detection  # E2: away-from-desk is on by default now
     presence_tracker = PresenceTracker(args.absence_grace)
     held_tracker = PhoneHeldTracker(motion_fraction=args.pickup_motion,
                                    motion_window=args.motion_window,
@@ -214,11 +283,20 @@ def run_camera(args):
             if not ok or frame is None:
                 failed_frames += 1
                 if failed_frames >= 15:
-                    print("Camera connection lost after 15 failed reads")
-                    break
+                    print("Camera stream failed after 15 reads. Releasing and retrying during studying.")
+                    close_camera()
+                    studying = False
+                    failure_reopens += 1
+                    if failure_reopens >= args.reopen_failures and not fallback:
+                        fallback = True
+                        print("WARNING: reopen unstable; discard-on-idle fallback enabled."
+                              " Physical camera stays open while idle if stream is functioning.")
                 time.sleep(0.2)
                 continue
             failed_frames = 0
+            successful_frames += 1
+            if successful_frames >= 50:
+                failure_reopens = 0
             frame_counter += 1
             height, width = frame.shape[:2]
             now = time.monotonic()
@@ -270,6 +348,14 @@ def run_camera(args):
                 if changed:
                     print(f"Confirmed after {args.hold_seconds:.1f}s: {stable.confirmed}")
 
+            # Check after potentially slow AI inference; do not send events
+            # for sessions that ended while inference was running.
+            if time.monotonic() - last_poll >= args.state_poll:
+                last_status = get_study_status(args.backend)
+                last_poll = time.monotonic()
+            if last_status is not True:
+                continue
+
             # Report confirmed state on transition, plus a heartbeat every 5s.
             # Contract states are present, away, phone_in_hand only.
             # During an unknown observation, do not invent a state. The
@@ -295,20 +381,27 @@ def run_camera(args):
                 cv2.putText(frame, f"State: {display_state}  Phone: {latest[1]}  Near hand: {latest[2]}",
                             (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.58, (0, 255, 0), 2)
                 cv2.imshow("FlowDesk Vision (Q to quit)", frame)
+                preview_open = True
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
     except KeyboardInterrupt:
         print("Stopped")
     finally:
-        capture.release()
-        landmarker.close()
-        if not args.no_window:
-            cv2.destroyAllWindows()
-
+        close_camera()
+        if landmarker is not None:
+            landmarker.close()
 
 def main():
     parser = argparse.ArgumentParser(description="FlowDesk local camera detection")
     parser.add_argument("--demo", action="store_true")
+    parser.add_argument("--stress-reopen", type=int, default=0,
+                        help="Open/read/close the camera N times (try 10), without AI or backend")
+    parser.add_argument("--state-poll", type=float, default=2.0,
+                        help="Seconds between GET /state privacy checks; default 2")
+    parser.add_argument("--discard-on-idle", action="store_true",
+                        help="Explicit privacy fallback: keep camera open and discard frames during idle/break")
+    parser.add_argument("--reopen-failures", type=int, default=3,
+                        help="Failed camera opens before enabling discard-on-idle fallback")
     parser.add_argument("--camera", type=int, default=1, help="Camera index")
     parser.add_argument("--backend", default=None, help="Backend base URL, e.g. http://127.0.0.1:8000")
     parser.add_argument("--interval", type=float, default=5.0, help="Heartbeat seconds (contract: 5)")
@@ -330,11 +423,20 @@ def main():
     parser.add_argument("--no-window", action="store_true")
     parser.add_argument("--draw", action="store_true")
     args = parser.parse_args()
-    if (args.every < 1 or args.interval <= 0 or args.hold_seconds < 0 or
+    if (args.state_poll <= 0 or args.stress_reopen < 0 or args.reopen_failures < 1 or
+            args.every < 1 or args.interval <= 0 or args.hold_seconds < 0 or
             args.motion_window <= 0 or args.pickup_motion <= 0 or
             args.release_grace < 0 or args.absence_grace < 0):
         parser.error("Invalid timing/motion options")
-    if args.demo:
+    if args.stress_reopen:
+        try:
+            import cv2
+        except ImportError as exc:
+            raise SystemExit("Install opencv-python in your venv first") from exc
+        success = stress_test_reopen(cv2, args.camera, args.stress_reopen)
+        if not success:
+            raise SystemExit(1)
+    elif args.demo:
         run_demo(args)
     else:
         run_camera(args)
