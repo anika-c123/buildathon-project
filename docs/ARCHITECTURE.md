@@ -46,7 +46,7 @@ A small add-on loaded into Chrome. When you switch tabs, it sends the site name 
 
 ### 3. Vision — the camera reporter (Eyes, `vision/`)
 
-A Python program that watches the camera feed and decides, a few times a second, whether you're **present**, **away**, or holding a **phone**. It sends only that one word (plus how sure it is), never pictures.
+A Python program that watches the camera feed and decides, a few times a second, whether you're **present**, **away**, or holding a **phone**. It only reads the camera while a study session is running, checking the backend every 2 seconds. It sends only that one word (plus how sure it is), never pictures.
 
 Built with **OpenCV** (reads the camera) and **YOLO** (a ready-made AI that recognizes everyday objects, including cell phones and people).
 

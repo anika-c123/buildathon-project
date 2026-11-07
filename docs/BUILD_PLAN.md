@@ -58,6 +58,7 @@ Everyone works in their own folder, testing against fake messages (`fake_events.
 | B9 | Chrome extension: reports active tab domain + title + focus; polls `/state` and only sends during a session | Switching tabs during a session shows `tab_change` in the backend log; nothing is sent when idle |
 | B10 | Task breakdown: `plan` → `plan_result` with 3–5 steps | Typing "Finish my Java assignment" returns sensible steps |
 | B11 | Nudge wording: 4–5 friendly variations per reason, rotated | Three nudges in a row use different wording |
+| B15 | Ignore `camera_state` outside `studying`; no camera nudges while the camera is `unknown` | Sending camera examples while idle changes nothing in `/state` |
 
 **Nice to have**
 - `summary` with an AI-written one-line note (B12)
@@ -80,6 +81,8 @@ Everyone works in their own folder, testing against fake messages (`fake_events.
 | E8 | If the backend is down, keep running and retry quietly | Restarting the backend doesn't crash vision |
 | E9 | Mount the camera above the desk and the projector aimed at a fixed zone; mark positions with tape | Setup can be taken down and rebuilt in under 5 minutes |
 | E10 | Test under bright and dim lighting with a real notebook and phone | Works in both, or you know which lighting to ask for |
+| E13 | Check `/state` every 2 s; open the camera only during `studying`, release it otherwise | Starting a session turns the preview on within a few seconds; break and end session turn it off; nothing is sent while idle |
+| E14 | Test releasing and reopening the GoPro 10 times in a row; if it's unreliable, switch to the discard-frames fallback and tell the team | The result is decided |
 
 **Nice to have**
 - Writing-motion detection (E11)
@@ -101,6 +104,7 @@ Everyone works in their own folder, testing against fake messages (`fake_events.
 | F8 | Break screen and end-of-session summary screen | Both display from the example files |
 | F9 | Desk design: dark background, light text, big type, calm colors (red is fine for a nudge, kept gentle) | Looks good projected in a bright room |
 | F10 | Works with the backend off: shows "Connecting…" instead of crashing | Tested |
+| F13 | Small, calm "camera on" dot on the desk view, per the contract rule | It appears after starting a session and disappears on break |
 
 **Nice to have**
 - Gentle animation when a nudge appears (F11)
@@ -139,6 +143,7 @@ Start this as soon as Checkpoint 1 passes. Don't wait to polish. Do it at one de
 | 3.5 | 3–4 pitch slides: problem → what exists → what PLocked combines → ADHD-first design | Face | Done |
 | 3.6 | Rehearse the full pitch + demo at least 3 times, timed | All | Under the time limit with 30 s spare |
 | 3.7 | Practice answers to judge questions (below) | All | Each person can answer any of them |
+| 3.8 | Optional: put a sliding lens cover on the GoPro and show it in the demo | Eyes | Decided whether to use it; if so, it's visible closed before a session and open during one |
 
 **✅ Checkpoint 3:** Pitch + demo rehearsed three times. Backup video exists.
 
@@ -175,6 +180,6 @@ Start this as soon as Checkpoint 1 passes. Don't wait to polish. Do it at one de
 
 - **"What if you unplug the camera?"** The browser part keeps working. But you'd lose the phone, which is the distraction no browser extension can see.
 - **"How is this different from AI focus extensions?"** Those only see the browser. PLocked also sees the phone and shows nudges where you're looking, which is the desk, not the laptop.
-- **"Isn't a camera on your desk creepy?"** It only runs in sessions you start. Video never leaves the laptop and is never saved. Only one word ("present", "phone") is used.
+- **"Isn't a camera on your desk creepy?"** PLocked only reads the camera during a session you start. Outside a session it doesn't receive video at all, and the desk shows a dot whenever it's watching. Video is never saved or sent anywhere.
 - **"Why ADHD?"** Re-entry, time blindness, and getting started are the moments that break study sessions. PLocked is designed around them. It's study support, not a medical claim.
 - **"Would anyone buy this?"** Honest answer: we'd test whether the desk nudge beats a laptop pop-up first. A phone-as-camera, software-only version is the realistic first product.

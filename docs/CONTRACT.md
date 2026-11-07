@@ -96,9 +96,13 @@ Sent when the active tab changes, the page title changes, or Chrome gains or los
 
 - `state`: exactly one of `present`, `away`, `phone_in_hand`.
 - `confidence`: 0 to 1, how sure the detector is.
-- Send when the state changes (after it has held steady for about 2 seconds, so it doesn't flicker), **and** at least every 5 seconds as a heartbeat ("still here").
-- If the backend hears nothing from vision for 15 seconds, it treats the camera as `unknown` and carries on with the browser alone. **Unplugging the camera never breaks PLocked.**
-- **Privacy:** vision never saves video or images and never sends pictures anywhere. Only these small messages leave `vision/`.
+- Send when the state changes (after it has held steady for about 2 seconds, so it doesn't flicker), **and** at least every 5 seconds as a heartbeat ("still here") — while the camera is open, i.e. only during `studying` (see below).
+- If the backend hears nothing from vision for 15 seconds while `studying`, it treats the camera as `unknown` and carries on with the browser alone. **A camera hiccup never breaks PLocked.**
+- Vision checks `GET /state` every 2 seconds. It opens the camera and sends `camera_state` only while `status` is `"studying"`. During `idle`, `break`, and `ended`, it releases the camera, sends nothing, and keeps checking.
+- When a session starts or a break ends, vision reopens the camera within a few seconds. Until its first message arrives, the backend shows the camera as `unknown`. That's expected, not an error.
+- The backend ignores any `camera_state` received while `status` isn't `"studying"`.
+- Vision never saves or sends images. Frames are analyzed and immediately discarded.
+- Fallback, only if reopening the GoPro proves unreliable: vision may keep the connection open but must discard every frame unread outside `studying`. Eyes decides this after testing and tells the team.
 
 ### `user_action` — from the app
 
@@ -162,6 +166,8 @@ The backend sends the **whole** current state every time anything changes, plus 
 
 `active_nudge.reason` is one of `unrelated_tab`, `phone`, `long_stretch` (time for a break). The app shows `message` exactly as given. The backend writes the wording and rotates it so it doesn't feel repetitive.
 
+The desk view shows a small "camera on" dot when `status` is `"studying"` and `camera.state` is not `"unknown"` — the one visible sign that PLocked is watching.
+
 ### `reentry` — welcome back
 
 Sent when the student returns from a nudge, a break, or being away. The app shows it for about 8 seconds.
@@ -209,6 +215,8 @@ Decision rules:
 - No nudges during a break or when there is no session.
 - Only one nudge on screen at a time.
 - A site marked `relevant` by the student is never nudged again that session.
+- No camera-based nudges (phone or away) while `camera.state` is `"unknown"`.
+- A break pauses both nudges and camera watching.
 
 ---
 
