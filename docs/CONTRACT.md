@@ -119,6 +119,7 @@ Every button press in the app is one `user_action`. The `action` field says whic
 | `resume` | — | Ends the break, sends a `reentry` |
 | `park` | `text` | Adds a thought to the "later" list |
 | `end_session` | — | Ends the session, sends a `summary` |
+| `set_display` | any of `theme` (`"dark"`/`"light"`), `showTimer`, `showTree`, `showQuote` (true/false) — only send the ones changing | Updates the desk's display settings, replies with `display_settings`. Not part of a session — survives `start_session`/`end_session`. |
 
 Example:
 
@@ -192,6 +193,14 @@ Sent when the student returns from a nudge, a break, or being away. The app show
 
 ```json
 { "message": "AI service didn't respond; treating the site as uncertain." }
+```
+
+### `display_settings` — the desk's current display settings
+
+Sent right after connecting (so a freshly-opened screen, on any device, sees the current choice immediately), and again whenever `set_display` changes something. Every open screen — the laptop and the desk view, even on a different device on the same network — gets the same values. Not part of `session_update`: it isn't reset when a session starts or ends.
+
+```json
+{ "theme": "dark", "showTimer": true, "showTree": true, "showQuote": true }
 ```
 
 ---

@@ -17,6 +17,11 @@ import ai
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "shared" / "examples"
 DEFAULT_BREAK_MINUTES = 5
 
+# Desk display preferences (theme, what panels show). Not part of the
+# session itself — set once, survives start_session/end_session, and any
+# screen (laptop or desk, on any device) sees the same values.
+DEFAULT_DISPLAY_SETTINGS = {"theme": "dark", "showTimer": True, "showTree": True, "showQuote": True}
+
 
 def load_example(filename: str) -> dict:
     with open(EXAMPLES_DIR / filename) as f:
@@ -32,7 +37,14 @@ class Session:
 
     def __init__(self):
         self.state = load_example("session_update_idle.json")
+        self.display_settings = dict(DEFAULT_DISPLAY_SETTINGS)
         self._reset_bookkeeping()
+
+    def update_display_settings(self, changes: dict) -> dict:
+        for key in DEFAULT_DISPLAY_SETTINGS:
+            if key in changes:
+                self.display_settings[key] = changes[key]
+        return self.display_settings
 
     def _reset_bookkeeping(self) -> None:
         self._breaks = 0
@@ -239,6 +251,11 @@ class Session:
     async def _handle_park(self, fields):
         self.state["parked"].append({"text": fields["text"], "timestamp": now_ms()})
         return True, None
+
+    async def _handle_set_display(self, fields):
+        # Not part of session_update, so `changed` is False — the caller
+        # broadcasts the returned display_settings message instead.
+        return False, ("display_settings", self.update_display_settings(fields))
 
     async def _handle_dismiss(self, fields):
         self.state["active_nudge"] = None

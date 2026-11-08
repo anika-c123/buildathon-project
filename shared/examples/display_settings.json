@@ -1,0 +1,12 @@
+{
+  "v": 1,
+  "source": "backend",
+  "type": "display_settings",
+  "data": {
+    "theme": "dark",
+    "showTimer": true,
+    "showTree": true,
+    "showQuote": true
+  },
+  "timestamp": 1762540000000
+}

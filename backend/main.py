@@ -164,6 +164,7 @@ async def ws(websocket: WebSocket):
     await websocket.accept()
     connections.add(websocket)
     await websocket.send_json(_envelope("session_update", session.snapshot()))
+    await websocket.send_json(_envelope("display_settings", session.display_settings))
     try:
         while True:
             await websocket.receive_text()  # the app never sends; this just waits for a disconnect

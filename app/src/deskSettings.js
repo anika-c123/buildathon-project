@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
+import { onMessage, sendAction } from "./connection.js";
 
 // Projector (desk) display settings, chosen on the laptop, plus a small
 // "the projector page is open" signal so the laptop can show its status.
 //
-// Both are kept in localStorage, which the laptop tab and the desk tab share
-// (same Chrome), and the browser tells each tab when the other changes it.
-// No backend needed.
+// Settings live on the BACKEND (a set_display user_action, broadcast back as
+// a display_settings message — see docs/CONTRACT.md), not localStorage: that
+// way every open screen — the laptop and the desk view, even on a different
+// device on the network — sees the same settings and updates the instant one
+// of them changes. (The heartbeat below is a separate, still-localStorage-only
+// mechanism — see its own note.)
 //
 // Settings:
 //   theme     "dark"  glowing outlines + light text (dark desks)
@@ -13,47 +17,37 @@ import { useEffect, useState } from "react";
 //                     a projector can't make black, so dark text needs a lit panel)
 //   showTimer / showTree / showQuote   what appears on the desk
 
-const SETTINGS_KEY = "plocked.deskSettings";
 const HEARTBEAT_KEY = "plocked.deskSeen";
-const SAME_TAB_EVENT = "plocked:deskSettings";
 const HEARTBEAT_EVERY_MS = 2000;
 const PROJECTOR_TIMEOUT_MS = 6000; // no heartbeat for this long = projector page closed
 
 export const DEFAULT_SETTINGS = { theme: "dark", showTimer: true, showTree: true, showQuote: true };
 
-function readSettings() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-    return { ...DEFAULT_SETTINGS, ...saved, theme: saved.theme === "light" ? "light" : "dark" };
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
 export function updateDeskSettings(changes) {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...readSettings(), ...changes }));
-  } catch {
-    // ignore: the choice just won't be remembered
-  }
-  window.dispatchEvent(new Event(SAME_TAB_EVENT));
+  sendAction("set_display", changes);
 }
 
 export function useDeskSettings() {
-  const [settings, setSettings] = useState(readSettings);
-  useEffect(() => {
-    const refresh = () => setSettings(readSettings());
-    window.addEventListener("storage", refresh); // changed in the other tab
-    window.addEventListener(SAME_TAB_EVENT, refresh); // changed in this tab
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener(SAME_TAB_EVENT, refresh);
-    };
-  }, []);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  useEffect(
+    () =>
+      onMessage((message) => {
+        if (message.type !== "display_settings") return;
+        const theme = message.data?.theme === "light" ? "light" : "dark";
+        setSettings((prev) => ({ ...prev, ...message.data, theme }));
+      }),
+    [],
+  );
   return settings;
 }
 
 // Called by the desk page: "I'm open", every 2 seconds.
+//
+// KNOWN GAP: still localStorage-only, so this (and "Projector connected"
+// below) only works when the laptop and desk tabs share a browser on the
+// same device — unlike the settings above, it does NOT yet detect a desk
+// view opened on a separate device. Same underlying fix would apply:
+// route it through the backend instead.
 export function useDeskHeartbeat() {
   useEffect(() => {
     const beat = () => {

@@ -24,12 +24,13 @@ The full rules live in [`docs/CONTRACT.md`](docs/CONTRACT.md) — that file is t
 - Every message shares one envelope, including a version number so everyone can tell if the shape ever changes:
 
 ```json
-{ "v": 1, "source": "extension | vision | app | backend", "type": "tab_change | camera_state | user_action | session_update | reentry | plan_result | summary | error", "data": {}, "timestamp": 0 }
+{ "v": 1, "source": "extension | vision | app | backend", "type": "tab_change | camera_state | user_action | session_update | reentry | plan_result | summary | error | display_settings", "data": {}, "timestamp": 0 }
 ```
 
 - `data` differs per `type` — see `docs/CONTRACT.md` and the ready-made example of every message in `shared/examples/`.
-- `user_action` covers every button in the app: `plan`, `start_session`, `step_done`, `dismiss`, `relevant`, `break`, `resume`, `park`, `end_session`.
+- `user_action` covers every button in the app: `plan`, `start_session`, `step_done`, `dismiss`, `relevant`, `break`, `resume`, `park`, `end_session`, `set_display`.
 - There's no separate `nudge` message — the current nudge, if any, lives inside `session_update.active_nudge`.
+- `display_settings` (theme, which panels show) lives on the backend too, separate from the session — every screen on every device sees the same choice, and it isn't reset when a session starts or ends.
 
 Adding a new optional field or message type is fine without a team meeting. Changing or removing something needs all three of you to agree first (contract §7).
 
