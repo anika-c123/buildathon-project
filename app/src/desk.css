@@ -32,39 +32,44 @@
 }
 
 /* ---------- Layout ----------
-    [ Now (step), the biggest ][ Progress ][ Quote + tree ]
-    [ laptop space (dotted), same left and right edges as the top row ]
-   Panels only along the top; the bottom ~two-thirds is left unlit for the
-   laptop and paper. */
+    [ Now (step) ][        laptop space (dotted)        ][ Progress ]
+    [            , same height, full height             ][ Quote+tree ]
+   The laptop space is the big middle area — where the laptop and paper
+   actually sit — so working there never covers a panel. Step on the left;
+   progress/time and quote/tree stacked in a column on the right. */
 
 .dsk-grid {
   position: absolute;
   inset: 3.5vh 2.6vw;
   display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.95fr) minmax(0, 1.25fr);
-  grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.4fr);
-  grid-template-areas:
-    "now time quote"
-    "laptop laptop laptop";
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 2.5fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "now laptop side";
   gap: 2.4vh 1.6vw;
 }
 
-/* Quote and tree both switched off: the step panel takes the space. */
+/* Quote and tree both switched off: just Progress in the side column, so
+   give the laptop space a little more room. */
 .dsk-grid.no-side {
-  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr);
-  grid-template-areas:
-    "now time"
-    "laptop laptop";
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 2.9fr) minmax(0, 0.75fr);
 }
 
 .dsk-now {
   grid-area: now;
 }
-.dsk-time {
-  grid-area: time;
+
+/* The right-hand column: Progress (+ Time) stacked above Quote + Tree. */
+.dsk-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4vh;
+  min-width: 0;
+  min-height: 0;
 }
-.dsk-quote {
-  grid-area: quote;
+.dsk-side .dsk-time,
+.dsk-side .dsk-quote {
+  flex: 1 1 0;
 }
 
 /* ---------- Glass outline panel ----------

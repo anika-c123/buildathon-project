@@ -11,10 +11,11 @@ import "./desk.css";
 //
 // DISPLAY ONLY: a projection can't be clicked, so there are no buttons here.
 // Every button (step done, break, park, nudge answers, quotes, display
-// settings) lives on the laptop's control screen. This page just draws the
-// latest session_update: panels along the top (current step, progress + time,
-// quote + focus tree) and an open, unlit "laptop space" across the bottom for
-// the laptop and paper. Black projects no light, so only lines and text show.
+// settings) lives on the laptop's control screen. This page draws the latest
+// session_update: the open, unlit "laptop space" sits in the middle (where
+// the laptop and paper actually go, so working there never covers a panel),
+// with the current step on the left and progress/time + quote/tree stacked
+// as a column on the right. Black projects no light, so only lines and text show.
 
 const REENTRY_SHOW_MS = 8000; // contract §5: show a welcome-back for about 8 seconds
 const CELEBRATE_MS = 1600;
@@ -116,17 +117,19 @@ export default function Desk() {
           reentry={reentry}
           celebration={celebration}
         />
-        <ProgressPanel steps={steps} time={time} onBreak={onBreak} showTimer={settings.showTimer} />
-        {(settings.showQuote || settings.showTree) && (
-          <QuoteTreePanel
-            showQuote={settings.showQuote}
-            showTree={settings.showTree}
-            tree={<FocusTree focusedMs={time.focusedMs} stepsDone={doneCount} stepsTotal={steps.length} />}
-          />
-        )}
         <div className="dsk-laptop-zone">
           <span className="dsk-laptop-label" aria-hidden="true">Laptop space</span>
           <CameraOnDot status={data.status} camera={data.camera} />
+        </div>
+        <div className="dsk-side">
+          <ProgressPanel steps={steps} time={time} onBreak={onBreak} showTimer={settings.showTimer} />
+          {(settings.showQuote || settings.showTree) && (
+            <QuoteTreePanel
+              showQuote={settings.showQuote}
+              showTree={settings.showTree}
+              tree={<FocusTree focusedMs={time.focusedMs} stepsDone={doneCount} stepsTotal={steps.length} />}
+            />
+          )}
         </div>
       </div>
     </Screen>
