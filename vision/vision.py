@@ -101,9 +101,7 @@ def reset_trackers(args):
     return (
         StableState(args.hold_seconds),
         PresenceTracker(args.absence_grace),
-        PhoneHeldTracker(motion_fraction=args.pickup_motion,
-                         motion_window=args.motion_window,
-                         release_grace=args.release_grace),
+        PhoneHeldTracker(motion_fraction=args.pickup_motion, motion_window=args.motion_window),
     )
 
 def deliver(payload, args):
@@ -130,23 +128,6 @@ def run_demo(args):
         print("Stopped")
 
 
-def finger_contact(phone_box, hands, width, height):
-    """Require multiple fingers near/inside phone, not just a nearby wrist.
-
-    Returns a heuristic contact candidate; 2-D landmarks cannot prove contact.
-    """
-    x1, y1, x2, y2 = phone_box
-    margin = 0.018 * math.hypot(width, height)
-    for hand in hands:
-        # Thumb/index/middle/ring/pinky fingertips and base joints.
-        ids = (4, 8, 12, 16, 20, 5, 9, 13, 17)
-        close = sum(x1 - margin <= hand[i][0] <= x2 + margin and
-                    y1 - margin <= hand[i][1] <= y2 + margin for i in ids)
-        if close >= 2:
-            return True
-    return False
-
-
 class PresenceTracker:
     """Allow short detector misses before proposing away.
 
@@ -170,44 +151,41 @@ class PresenceTracker:
 
 
 class PhoneHeldTracker:
-    """Latch a likely pickup while hand contact persists, even if phone stops moving.
-
-    Works best with a stationary camera and one phone. Movement alone never
-    indicates phone_in_hand; we also require multiple nearby hand landmarks.
+    """phone_in_hand = the phone is currently moving. A flat, ignored phone
+    doesn't move on its own, so this still roughly tells "picked up and
+    being used" apart from "resting on the desk" (CLAUDE.md's rule) —
+    without needing reliable hand-landmark tracking, which proved too
+    flaky in practice. Trade-off: holding it perfectly still (e.g.
+    reading) for longer than motion_window reverts to "present" until it
+    moves again.
     """
-    def __init__(self, motion_fraction=0.018, motion_window=3.0,
-                 release_grace=1.0):
+    def __init__(self, motion_fraction=0.018, motion_window=3.0, **_ignored):
         self.motion_fraction = motion_fraction
         self.motion_window = motion_window
-        self.release_grace = release_grace
         self.last_center = None
         self.last_motion = float('-inf')
-        self.last_contact = None
         self.held = False
 
-    def update(self, phones, hands, width, height, now):
+    def update(self, phones, width, height, now):
         if not phones:
-            self.last_center = None
-            if self.last_contact is None or now - self.last_contact >= self.release_grace:
-                self.held = False
-            return self.held, False
+            # Don't forget where it was: detection itself flickers frame to
+            # frame, so wiping this on every miss meant two detections were
+            # almost never adjacent enough to compare — motion essentially
+            # never registered. Keep it so the next real detection can still
+            # compare against where it last actually was.
+            self.held = now - self.last_motion <= self.motion_window
+            return self.held
 
         # Largest phone box is a simple single-phone assumption.
-        box = max(phones, key=lambda b: (b[2]-b[0])*(b[3]-b[1]))
-        center = ((box[0]+box[2])/2, (box[1]+box[3])/2)
+        box = max(phones, key=lambda b: (b[2] - b[0]) * (b[3] - b[1]))
+        center = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
         diag = math.hypot(width, height)
         if self.last_center is not None and math.dist(center, self.last_center) > self.motion_fraction * diag:
             self.last_motion = now
         self.last_center = center
 
-        contact = finger_contact(box, hands, width, height)
-        if contact:
-            self.last_contact = now
-            if now - self.last_motion <= self.motion_window:
-                self.held = True
-        elif self.last_contact is None or now - self.last_contact >= self.release_grace:
-            self.held = False
-        return self.held, contact
+        self.held = now - self.last_motion <= self.motion_window
+        return self.held
 
 
 class StableState:
@@ -266,15 +244,20 @@ def run_camera(args):
     start_time = time.monotonic()
     last_sent = 0.0
     last_reported_state = None
-    latest = ("unknown", False, False)
+    latest = ("unknown", False)
     last_boxes = []
     last_points = []
     presence_tracker = PresenceTracker(args.absence_grace)
-    held_tracker = PhoneHeldTracker(motion_fraction=args.pickup_motion,
-                                   motion_window=args.motion_window,
-                                   release_grace=args.release_grace)
+    held_tracker = PhoneHeldTracker(motion_fraction=args.pickup_motion, motion_window=args.motion_window)
     frame_counter = 0
     failed_frames = 0
+    last_status = None
+    last_poll = 0.0
+    empty_means_away = not args.no_away_detection  # E2: away-from-desk is on by default now
+
+    def close_camera():
+        capture.release()
+
     print("Camera running. Press Q in preview or Ctrl+C in terminal to quit.")
 
     try:
@@ -283,26 +266,21 @@ def run_camera(args):
             if not ok or frame is None:
                 failed_frames += 1
                 if failed_frames >= 15:
-                    print("Camera stream failed after 15 reads. Releasing and retrying during studying.")
-                    close_camera()
-                    studying = False
-                    failure_reopens += 1
-                    if failure_reopens >= args.reopen_failures and not fallback:
-                        fallback = True
-                        print("WARNING: reopen unstable; discard-on-idle fallback enabled."
-                              " Physical camera stays open while idle if stream is functioning.")
+                    # --reopen-failures / --discard-on-idle aren't wired up to an
+                    # actual reopen cycle yet (that needs real hardware testing,
+                    # E14) — stop cleanly rather than guess at untested recovery
+                    # behavior.
+                    print("Camera stream failed after 15 reads. Stopping.")
+                    break
                 time.sleep(0.2)
                 continue
             failed_frames = 0
-            successful_frames += 1
-            if successful_frames >= 50:
-                failure_reopens = 0
             frame_counter += 1
             height, width = frame.shape[:2]
             now = time.monotonic()
 
             if frame_counter % args.every == 0:
-                detected = objects.predict(frame, conf=0.35, imgsz=640, verbose=False)[0]
+                detected = objects.predict(frame, conf=args.phone_conf, imgsz=640, verbose=False)[0]
                 phones = []
                 people = False
                 for box in detected.boxes:
@@ -331,15 +309,13 @@ def run_camera(args):
                     people or bool(hands), now, empty_means_away
                 )
 
-                # E4: phone must move while at least two relevant hand
-                # landmarks are near it. After pickup, keep held while contact
-                # remains even if the phone itself becomes stationary.
-                held, near_hand = held_tracker.update(
-                    phones, hands, width, height, now
-                )
+                # E4: phone_in_hand requires the phone to actually be moving
+                # (hand-landmark contact proved too unreliable in testing to
+                # use as a signal — see PhoneHeldTracker's docstring).
+                held = held_tracker.update(phones, width, height, now)
                 raw_state = "phone_in_hand" if held else presence
 
-                latest = (raw_state, bool(phones), near_hand)
+                latest = (raw_state, bool(phones))
                 last_boxes, last_points = phones, points
                 # Unknown is not a permitted contract event. Hold the last
                 # confirmed state during short uncertainty, but do not send
@@ -378,7 +354,7 @@ def run_camera(args):
                     for x, y in last_points:
                         cv2.circle(frame, (int(x), int(y)), 5, (0, 255, 0), -1)
                 display_state = stable.confirmed or f"checking {latest[0]}..."
-                cv2.putText(frame, f"State: {display_state}  Phone: {latest[1]}  Near hand: {latest[2]}",
+                cv2.putText(frame, f"State: {display_state}  Phone: {latest[1]}",
                             (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.58, (0, 255, 0), 2)
                 cv2.imshow("FlowDesk Vision (Q to quit)", frame)
                 preview_open = True
@@ -407,12 +383,13 @@ def main():
     parser.add_argument("--interval", type=float, default=5.0, help="Heartbeat seconds (contract: 5)")
     parser.add_argument("--hold-seconds", type=float, default=2.0, help="Seconds to confirm any changed state")
     parser.add_argument("--every", type=int, default=5, help="Process each Nth frame")
+    parser.add_argument("--phone-conf", type=float, default=0.35,
+                        help="YOLO confidence threshold for detecting a phone (0-1). Lower it if "
+                             "detection flickers on/off instead of holding steady.")
     parser.add_argument("--motion-window", type=float, default=3.0,
                         help="Seconds after a phone move that contact can count as pickup")
     parser.add_argument("--pickup-motion", type=float, default=0.018,
                         help="Phone movement threshold as fraction of frame diagonal")
-    parser.add_argument("--release-grace", type=float, default=1.0,
-                        help="Seconds of missing hand contact before releasing held state")
     parser.add_argument("--absence-grace", type=float, default=2.0,
                         help="Seconds with no person/hands before raw away can begin")
     parser.add_argument("--no-away-detection", action="store_true",
@@ -426,7 +403,7 @@ def main():
     if (args.state_poll <= 0 or args.stress_reopen < 0 or args.reopen_failures < 1 or
             args.every < 1 or args.interval <= 0 or args.hold_seconds < 0 or
             args.motion_window <= 0 or args.pickup_motion <= 0 or
-            args.release_grace < 0 or args.absence_grace < 0):
+            args.absence_grace < 0 or not 0 < args.phone_conf <= 1):
         parser.error("Invalid timing/motion options")
     if args.stress_reopen:
         try:
