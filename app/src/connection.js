@@ -3,15 +3,20 @@
 //
 // In plain English:
 // - We open a WebSocket (a connection that stays open so the backend can
-//   push updates the instant something changes) to ws://localhost:8000/ws.
+//   push updates the instant something changes) to the backend on port 8000.
+// - The backend always runs on the laptop, on whatever address this page
+//   itself was opened with (window.location.hostname) — so this works the
+//   same whether you open localhost:5173 on the laptop, or the laptop's
+//   network address from a different device, with no hardcoded address.
 // - Every time the backend sends a session_update, we keep the newest one
 //   and tell every screen to redraw.
 // - If the connection drops (backend restarted, laptop asleep), we wait a
 //   moment and try again, forever, until it comes back.
 // - Button presses become user_action messages, POSTed to /event.
 
-const WS_URL = "ws://localhost:8000/ws";
-const EVENT_URL = "http://localhost:8000/event";
+const BACKEND_HOST = `${window.location.hostname}:8000`;
+const WS_URL = `ws://${BACKEND_HOST}/ws`;
+const EVENT_URL = `http://${BACKEND_HOST}/event`;
 const FIRST_RETRY_MS = 1000; // wait 1 s before the first retry...
 const MAX_RETRY_MS = 5000; // ...then a little longer each time, up to 5 s
 

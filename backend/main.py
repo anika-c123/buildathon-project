@@ -28,10 +28,11 @@ APP_DOMAINS = {"localhost", "127.0.0.1"}
 app = FastAPI()
 
 # The backend's "guest list": who is allowed to talk to it from a browser.
+# The app regex (any host, port 5173) covers localhost, 127.0.0.1, and any
+# device on the same network opening the app at the laptop's LAN address.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_origin_regex=r"chrome-extension://.*",
+    allow_origin_regex=r"^(chrome-extension://.*|https?://[^/]+:5173)$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
