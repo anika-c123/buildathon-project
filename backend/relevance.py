@@ -70,9 +70,10 @@ async def check_relevance(goal: str, domain: str, title: str) -> tuple[str, str 
             client.messages.create(
                 model=MODEL,
                 # Generous for a one-word answer: any reasoning Claude does
-                # before answering counts against this too, and 10 tokens
-                # left zero room for that, risking a truncated response.
-                max_tokens=100,
+                # before answering counts against this too, and too little
+                # room here means the budget can run out before any actual
+                # text block is produced at all (not just truncated — missing).
+                max_tokens=300,
                 messages=[{"role": "user", "content": _prompt(goal, domain, title)}],
             ),
             timeout=TIMEOUT_SECONDS,

@@ -21,6 +21,10 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 HEARTBEAT_SECONDS = 5
 TICK_SECONDS = 1
 
+# The control screen itself is never "off task" — if the student's active tab
+# is PLocked's own dashboard, treat it as relevant without an AI call.
+APP_DOMAINS = {"localhost", "127.0.0.1"}
+
 app = FastAPI()
 
 # The backend's "guest list": who is allowed to talk to it from a browser.
@@ -115,7 +119,9 @@ async def post_event(request: Request):
             domain, title, focused = data.get("domain"), data.get("title"), data.get("focused", True)
             error = None
             if focused and domain:
-                if session.is_marked_relevant(domain):
+                if domain in APP_DOMAINS:
+                    label = "relevant"  # it's PLocked's own dashboard, not a distraction
+                elif session.is_marked_relevant(domain):
                     label = "relevant"  # never re-checked or re-nudged this session (contract §4)
                 else:
                     goal = session.snapshot()["goal"]

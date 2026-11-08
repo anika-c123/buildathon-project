@@ -23,3 +23,7 @@ venv/
 *.avi
 *.mkv
 *.webm
+
+# Downloaded AI model weights (re-downloadable, large; vision/README.md agrees)
+*.pt
+*.task
