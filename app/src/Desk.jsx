@@ -160,7 +160,9 @@ function NowPanel({ data, steps, onBreak, breakLeft, breakOver, reentry, celebra
         <h1 className="dsk-big dsk-nudge-text" key={nudge.id}>
           {nudge.message}
         </h1>
-        <p className="dsk-hint">Answer on your laptop · Back to work, Break, or This is relevant</p>
+        <p className="dsk-hint">
+          Answer on your laptop · Back to work, Break{nudge.reason !== "long_stretch" && ", or This is relevant"}
+        </p>
       </Panel>
     );
   }
