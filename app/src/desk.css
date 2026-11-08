@@ -138,11 +138,37 @@
   border-radius: 2.4vw;
   display: flex;
   align-items: flex-end;
-  justify-content: flex-start;
+  justify-content: space-between; /* label bottom-left, camera dot bottom-right */
   padding: 2vh 1.8vw;
 }
 
-.dsk-laptop-zone span {
+/* F13: small, calm "camera on" dot (bottom-right of the laptop space). */
+.dsk-camera-on {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6vw;
+  font-size: clamp(10px, 0.9vw, 19px);
+  letter-spacing: 0.08em;
+  color: var(--dsk-soft);
+  animation: dsk-rise 0.6s ease-out;
+}
+
+.dsk-camera-dot {
+  width: clamp(8px, 0.75vw, 15px);
+  height: clamp(8px, 0.75vw, 15px);
+  border-radius: 50%;
+  background: var(--dsk-on);
+  box-shadow: 0 0 0.6vw var(--dsk-on);
+  animation: dsk-camera-breathe 4s ease-in-out infinite; /* slow, so it never draws the eye */
+}
+
+@keyframes dsk-camera-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.dsk-laptop-label {
   font-size: clamp(10px, 0.9vw, 19px);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -656,7 +682,7 @@
   border-color: #4a424d;
 }
 
-.dsk-theme-light .dsk-laptop-zone span {
+.dsk-theme-light .dsk-laptop-label {
   color: #6e6370;
 }
 
@@ -679,4 +705,15 @@
 
 .dsk-theme-light .dsk-tone-nudge .dsk-kicker {
   color: #d62839;
+}
+
+/* The laptop space stays unlit (black) in light mode too, so the camera dot
+   keeps its bright colours there instead of light mode's darker ones. */
+.dsk-theme-light .dsk-camera-on {
+  color: #cdbfc9;
+}
+
+.dsk-theme-light .dsk-camera-dot {
+  background: #b9e6c9;
+  box-shadow: 0 0 0.6vw #b9e6c9;
 }

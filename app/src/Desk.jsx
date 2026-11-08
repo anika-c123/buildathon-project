@@ -124,8 +124,9 @@ export default function Desk() {
             tree={<FocusTree focusedMs={time.focusedMs} stepsDone={doneCount} stepsTotal={steps.length} />}
           />
         )}
-        <div className="dsk-laptop-zone" aria-hidden="true">
-          <span>Laptop space</span>
+        <div className="dsk-laptop-zone">
+          <span className="dsk-laptop-label" aria-hidden="true">Laptop space</span>
+          <CameraOnDot status={data.status} camera={data.camera} />
         </div>
       </div>
     </Screen>
@@ -294,6 +295,23 @@ function QuoteTreePanel({ showQuote, showTree, tree }) {
         )}
       </div>
     </Panel>
+  );
+}
+
+// ---------- "Camera on" dot (F13) ----------
+// Contract §5: the desk shows a small "camera on" dot while status is
+// "studying" and camera.state isn't "unknown", the one visible sign that
+// PLocked is watching. It disappears on a break (vision releases the camera)
+// and when the camera goes quiet (the backend marks it "unknown").
+
+function CameraOnDot({ status, camera }) {
+  const on = status === "studying" && (camera?.state ?? "unknown") !== "unknown";
+  if (!on) return null;
+  return (
+    <span className="dsk-camera-on" role="status">
+      <span className="dsk-camera-dot" aria-hidden="true" />
+      camera on
+    </span>
   );
 }
 
